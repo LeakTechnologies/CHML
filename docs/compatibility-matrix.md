@@ -68,9 +68,10 @@ about browser conformance.** No row here is backed by browser-level testing.
 | Item | Status | Note |
 | --- | --- | --- |
 | ISO C11, GCC (Windows) | Tested | 15.2.0 MinGW-w64/UCRT, strict flags, 6/6 tests |
-| ISO C11, GCC (Linux) | Not executed | Gate defined in `scripts/linux/dev-verify.sh`; no Linux host available yet |
-| ISO C11, Clang (Linux) | Not executed | Gate defined; Clang is not installed on the current Windows host |
-| POSIX atomic replacement (`rename`) | Not executed | Compiled only on this host; `scripts/linux/dev-verify.sh` asserts `posix-rename` at run time |
+| ISO C11, GCC (Linux) | Blocked | Gate defined; GitHub Actions job never starts (private repo, account billing) |
+| ISO C11, Clang (Linux) | Blocked | Gate defined; same blocker |
+| POSIX atomic replacement (`rename`) | Blocked | Compiled only on this host; the Linux gate has never executed |
+| GitHub Actions Linux gate | Blocked | Workflow `linux-verify.yml` exists; run 40547489801 failed with 0 steps executed |
 | Win32 atomic replacement (`MoveFileExA`) | Tested | `chml_atomic_identity_test` asserts identity changes |
 | Atomic negative control (in-place write) | Tested | `chml_atomic_identity_negative`, registered `WILL_FAIL` |
 | C23 | Deferred | Target only; not compiled as C23 |

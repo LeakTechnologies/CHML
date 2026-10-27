@@ -4,6 +4,38 @@ Behaviour-affecting changes, newest first. Test counts are for `ctest` on the
 suite as configured in `CMakeLists.txt`. The suite now has 6 tests because two
 are replacement-mechanism checks, one of which is **expected to fail by design**.
 
+## Unreleased — M0.4-D2 Linux verification execution (2026-10-27)
+
+### Added
+
+- **`.github/workflows/linux-verify.yml`** — runs `scripts/linux/dev-verify.sh`
+  on `ubuntu-latest` for pushes and pull requests to `master`, plus manual
+  dispatch. `contents: read` only, no third-party actions, logs uploaded on
+  failure, and the gate conclusion printed explicitly.
+- Negative-control reason reporting, described below.
+
+### Changed
+
+- `tests/atomic_identity_test.c` prints
+  `NEGATIVE_CONTROL_REASON=identity_unchanged` (exit 1, intended),
+  `harness_error` (exit 2) or `none` (exit 0). Both verification scripts now
+  require exit 1 **and** the `identity_unchanged` marker, so a crash or an
+  unrelated failure can no longer pass as a successful discrimination.
+- Remote `main` deleted after the four preconditions were verified.
+
+### Blocked
+
+The workflow triggered but GitHub did not start the job:
+
+> The job was not started because recent account payments have failed or your
+> spending limit needs to be increased.
+
+Run `40547489801` concluded `failure` after 3 s with zero steps executed.
+Repository Actions policy is `enabled`/`all`, so the blocker is account billing
+for a **private** repository, not a workflow defect.
+
+**No Linux evidence exists.** M0.4-D stays open.
+
 ## Unreleased — M0.4-D cross-platform verification (2026-10-27)
 
 ### Added

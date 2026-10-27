@@ -1,5 +1,55 @@
 # CHML done log
 
+## 2026-10-27 — M0.4-D2 Linux verification execution (blocked before execution)
+
+Done:
+
+- `.github/workflows/linux-verify.yml`: runs `scripts/linux/dev-verify.sh` on
+  `ubuntu-latest` for pushes and pull requests to `master`, plus manual dispatch.
+  Least privilege (`contents: read`), no third-party actions, logs uploaded even
+  on failure, and the gate conclusion surfaced explicitly.
+- Negative control strengthened: `atomic_identity_test` now prints
+  `NEGATIVE_CONTROL_REASON=identity_unchanged|harness_error|none`, and both
+  scripts require exit status 1 **and** the `identity_unchanged` marker. A crash
+  or unrelated error can no longer satisfy the check.
+- Remote `main` removed after verifying the four preconditions.
+
+Blocked:
+
+- The workflow was pushed and triggered, and GitHub **never started the job**:
+
+  ```
+  The job was not started because recent account payments have failed or your
+  spending limit needs to be increased. Please check the 'Billing & plans'
+  section in your settings
+  ```
+
+  Run: https://github.com/LeakTechnologies/CHML/actions/runs/40547489801
+  Conclusion: `failure` after 3 s, job not started.
+
+Diagnosis (read-only):
+
+- `repos/.../actions/permissions` → `{"enabled":true,"allowed_actions":"all"}`.
+  Actions is enabled at repository level; policy is not the blocker.
+- Repository visibility is **private**. Private repositories consume paid
+  minutes; the account's payment or spending limit is the blocker.
+- Billing endpoints require `admin:org` and were not queried further.
+
+Consequence: **no Linux, Clang, ASan, UBSan or POSIX evidence was produced.**
+M0.4-D remains open. Nothing was substituted for real execution.
+
+Branch housekeeping:
+
+| Check | Result |
+| --- | --- |
+| `master` is the default branch | yes |
+| `main` holds no unique work | one file, `README.md`, content `# CHML` |
+| Open PRs depending on `main` | none |
+| Branch protection on `main` | impossible on a private free repo (API returns 403) |
+| Initial commit merged into `master` | yes, `9ae8d1c` is an ancestor |
+
+`main` deleted via the API. No force-push and no history rewriting.
+
 ## 2026-10-27 — M0.4-D cross-platform verification (partial: Windows only)
 
 Done:

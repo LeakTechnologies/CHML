@@ -25,8 +25,10 @@ M0.4 incremental evidence:
 - M0.4-D: cross-platform verification gate **defined and partially executed.**
   In-repository scripts for Linux and Windows; atomic replacement is asserted at
   run time; a discriminating negative control is part of `ctest` (6 tests).
-  Windows/GCC passes. **Linux/GCC, Linux/Clang, ASan and UBSan have not been
-  executed** — no Linux host is available on the development machine.
+  Windows/GCC passes. A GitHub Actions workflow now runs the Linux gate, but
+  **the job never starts**: the repository is private and the account's Actions
+  billing is failing. Linux/GCC, Linux/Clang, ASan, UBSan and the POSIX path
+  remain **unexecuted**.
 
 Still **open** in M0.4:
 
