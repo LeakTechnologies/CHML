@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CHML M0.4-D - Linux verification gate.
+# CHML Linux verification gate.
 #
 # Verifies the production implementation on a POSIX host. It does not install
 # anything, does not modify the toolchain, and does not claim crash durability or
@@ -240,8 +240,8 @@ echo
 echo "Not claimed by this gate: crash durability, power-loss durability,"
 echo "concurrent-writer safety, browser conformance, or performance."
 if [[ "$FAILED" -ne 0 ]]; then
-    echo "M0.4-D: FAILED"
+    echo "CHML verification: FAILED"
     exit 1
 fi
-echo "M0.4-D: PASSED on this host"
+echo "CHML verification: PASSED on this host"
 exit 0

@@ -141,6 +141,36 @@ attribute list rather than a region array.
 - `chml_builder_mark` taking a parent couples the checkpoint to a specific node;
   a parameterless mark would be simpler but cannot restore the child list.
 
+## Ergonomics investigation (M0.5-B)
+
+Three ways to write the same failing-capable component, all over the existing
+builder and all inside `examples/ergonomics/main.c` — no library change:
+
+| Approach | Cleanup sites in the component | Notes |
+| --- | --- | --- |
+| A. single exit with `goto cleanup` | 1 explicit `chml_builder_rollback` | Portable, obvious; but a newly added early return silently skips cleanup unless it also uses `goto` |
+| B. structured macro (`CHML_TRY_ROLLBACK`) | 0 | Portable ISO C; terse; but the macro captures `b` and `mark` from the enclosing scope, so the rollback is invisible at the call site, and forgetting to wrap one call fails silently |
+| C. scoped callback (`chml_component_scope`) | 0 | Portable; the body never sees the mark, so it cannot forget; costs one function pointer, one `void *ctx`, and a second function per component |
+
+Executable evidence: each approach was failed at every allocation point inside
+the component (23 points with block size forced to 1). All three reclaimed the
+session to its baseline byte count at every point.
+
+### Recommendation
+
+Adopt **C** for component bodies that can fail, and keep **A** for callers.
+Reject **B** as the primary style: it works, but the failure mode of a missed
+wrapper is silent, which is the property we are trying to eliminate.
+
+C does not by itself solve the *caller's* discard obligation. The analogous
+step is a session-scope helper that opens a session, runs a body, and either
+attaches or discards — removing the last duplicated cleanup from callers. That
+should be prototyped against the real site port before being proposed as API.
+
+This is not yet accepted. The investigation shows the shape is viable; it does
+not show it is pleasant at site scale with nested components and content from a
+real page tree.
+
 ## Evidence
 
 `tests/builder_test.c` — exact serialization, byte-identical parity with the

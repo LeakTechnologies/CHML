@@ -14,6 +14,11 @@ target_link_libraries(chml_hello PRIVATE chml)
 
 add_executable(chml_components_example examples/components/main.c)
 target_link_libraries(chml_components_example PRIVATE chml_components)
+
+add_executable(chml_ergonomics_test examples/ergonomics/main.c)
+target_link_libraries(chml_ergonomics_test PRIVATE chml)
+target_include_directories(chml_ergonomics_test PRIVATE src)
+add_test(NAME chml_ergonomics_test COMMAND chml_ergonomics_test)
 enable_testing()
 add_executable(chml_style_test tests/style_test.c)
 target_link_libraries(chml_style_test PRIVATE chml)

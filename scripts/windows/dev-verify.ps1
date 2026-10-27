@@ -6,7 +6,7 @@ the tools this host actually has. It never installs anything and never changes
 the toolchain.
 
 By default every required tool must be present (cmake, ctest, gcc, clang) and the
-run reports FAILED if one is missing, because M0.4-D requires cross-compiler
+run reports FAILED if one is missing, because the gate requires cross-compiler
 evidence. Use -AllowPartial for local iteration: missing tools are reported as
 SKIPPED and the run ends INCOMPLETE rather than PASSED.
 
@@ -177,7 +177,7 @@ Section 'summary'
 $rows | ForEach-Object { Write-Host $_ }
 Write-Host ''
 Write-Host 'Not claimed by this gate: crash durability, concurrency safety, browser conformance, performance.'
-if ($script:Failed) { Write-Host 'M0.4-D (Windows): FAILED' ; exit 1 }
-if ($script:Skipped -gt 0) { Write-Host "M0.4-D (Windows): INCOMPLETE - $($script:Skipped) step(s) skipped"; exit 1 }
-Write-Host 'M0.4-D (Windows): PASSED on this host'
+if ($script:Failed) { Write-Host 'CHML verification (Windows): FAILED' ; exit 1 }
+if ($script:Skipped -gt 0) { Write-Host "CHML verification (Windows): INCOMPLETE - $($script:Skipped) step(s) skipped"; exit 1 }
+Write-Host 'CHML verification (Windows): PASSED on this host'
 exit 0

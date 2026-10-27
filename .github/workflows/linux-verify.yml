@@ -1,6 +1,6 @@
 name: linux-verify
 
-# M0.4-D: runs the authoritative Linux verification gate on a real Linux host.
+# Runs the authoritative Linux verification gate on a real Linux host.
 # The script is the entry point; this workflow only provisions the runner and
 # publishes its logs. Verification logic must not be duplicated here.
 
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   verify:
-    name: M0.4-D Linux verification
+    name: Linux verification
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -62,9 +62,9 @@ jobs:
         if: always()
         run: |
           if [ "${{ steps.gate.outcome }}" = "success" ]; then
-            echo "M0.4-D Linux gate: PASSED"
+            echo "Linux gate: PASSED"
           else
-            echo "M0.4-D Linux gate: FAILED (see the linux-verify-logs artifact)"
+            echo "Linux gate: FAILED (see the linux-verify-logs artifact)"
           fi
 
       - name: Fail if the gate did not pass
