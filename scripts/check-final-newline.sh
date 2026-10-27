@@ -7,10 +7,18 @@
 # a space, or in any other byte is a violation. Empty files are accepted: there
 # is no last line to terminate.
 #
-# The inventory is Git's, not the filesystem's, so build output, editor backup
-# files and any other untracked material cannot influence the result. Paths are
-# read NUL-separated from `git ls-files -z` and `find -print0`, so names that
-# contain spaces, quotes or non-ASCII bytes are handled verbatim.
+# CONTRACT - what is checked
+#   * Paths are enumerated from Git's index (`git ls-files -z`), never from a
+#     filesystem walk, so build output and untracked files cannot affect the
+#     result.
+#   * The bytes checked are the WORKING-TREE files at those paths. Committed
+#     blob contents are not read directly.
+#   * A violation introduced by an uncommitted working-tree edit is therefore
+#     reported, and a clean checkout can differ from the last commit only by
+#     line-ending conversion.
+#   * LF and CRLF both satisfy the rule, because both end with byte 0x0A.
+#   * A tracked file that is unreadable, or absent from the working tree, is a
+#     verification failure (exit 2), never a pass.
 #
 # Modes:
 #   check-final-newline.sh tracked [repo-root]   check the tracked tree
@@ -21,6 +29,8 @@
 #       1 = at least one violation
 #       2 = usage, environment or internal error, including a skipped file
 #
+# This is a Bash script, not a POSIX sh script: it uses BASH_SOURCE, `read -d`,
+# parameter expansion and `local`. Both host gates invoke it as `bash <script>`.
 # scripts/check-final-newline.ps1 is the Windows counterpart. The two must
 # produce the same verdicts; both `controls` modes assert the same fixture table
 # and print the same case identifiers so the two outputs can be compared.
@@ -154,8 +164,31 @@ control_bad() {
     printf '  FAIL %s\n' "$1"
 }
 
+# The meta-controls mutate this script and re-run its own controls. They must not
+# recurse, so a mutated copy is run with CHML_HYGIENE_NO_META set.
+run_mutation_controls() {
+    local mut
+
+    mut="$CONTROL_TMP/accept-all.sh"
+    sed 's/= "10" \]/= "10" ] || true/' "$SELF" >"$mut"
+    if CHML_HYGIENE_NO_META=1 bash "$mut" controls >/dev/null 2>&1; then
+        control_bad "mutation-always-accept: these controls did not detect a checker that accepts everything"
+    else
+        control_ok "mutation-always-accept: detected"
+    fi
+
+    mut="$CONTROL_TMP/reject-all.sh"
+    sed 's/= "10" \]/= "99" ]/' "$SELF" >"$mut"
+    if CHML_HYGIENE_NO_META=1 bash "$mut" controls >/dev/null 2>&1; then
+        control_bad "mutation-always-reject: these controls did not detect a checker that rejects everything"
+    else
+        control_ok "mutation-always-reject: detected"
+    fi
+}
+
 run_controls() {
-    local pass fail out rc case
+    local pass fail out rc case repo out2 rc2 mut
+    local uni_ok uni_bad
 
     CONTROL_TMP=$(mktemp -d "${TMPDIR:-/tmp}/chml-newline-ctl.XXXXXX") || return 2
     trap cleanup_controls EXIT
@@ -163,31 +196,34 @@ run_controls() {
     fail="$CONTROL_TMP/fail"
     mkdir -p "$pass/sub dir" "$fail/sub"
 
-    # Accepted: LF, CRLF, empty, an out-of-scope extension, and a space in a
-    # directory name.
+    uni_ok=$(printf 'unicod\xc3\xa9.md')
+    uni_bad=$(printf 'unicod\xc3\xa9-bad.md')
+
+    # Accepted: LF, CRLF, empty, a non-ASCII name, an out-of-scope extension, and
+    # a space in a directory name.
     printf 'line\n' >"$pass/lf.md"
     printf 'line\r\n' >"$pass/crlf.c"
     : >"$pass/empty.h"
+    printf 'line\n' >"$pass/$uni_ok"
     printf 'no newline here' >"$pass/ignore.txt"
     printf 'x\n' >"$pass/sub dir/nested.sh"
 
-    # Refused: missing LF, bare CR, and names containing a space or a quote.
+    # Refused: missing LF, bare CR, and names containing a space, a quote or
+    # non-ASCII bytes.
     printf 'no newline' >"$fail/missing.md"
     printf 'line\r' >"$fail/bare-cr.c"
     printf 'no newline' >"$fail/space name.md"
     printf 'no newline' >"$fail/quote'name.md"
+    printf 'no newline' >"$fail/$uni_bad"
     printf 'no newline' >"$fail/sub/missing.h"
     printf 'no newline' >"$fail/ignore.txt"
 
-    # Invoked through bash explicitly: the executable bit is not reliable across
-    # checkouts (a Windows checkout stores no mode), and this same script is
-    # run by the Linux gate as `bash check-final-newline.sh`.
     out=$(bash "$SELF" dir "$pass" 2>&1)
     rc=$?
     if [ "$rc" -eq 0 ]; then
-        control_ok "accept-lf+crlf+empty: positive fixture passes"
+        control_ok "accept-lf+crlf+empty+unicode: positive fixture passes"
     else
-        control_bad "accept-lf+crlf+empty: refused with rc=$rc: $out"
+        control_bad "accept-lf+crlf+empty+unicode: refused with rc=$rc: $out"
     fi
     case $out in
         *"0 violation"*) control_ok "positive-report: zero violations" ;;
@@ -196,6 +232,10 @@ run_controls() {
     case $out in
         *"1 empty"*) control_ok "accept-empty: empty file counted, not refused" ;;
         *) control_bad "accept-empty: $out" ;;
+    esac
+    case $out in
+        *"unicod"*) control_bad "accept-unicode: a compliant non-ASCII name was reported" ;;
+        *) control_ok "accept-unicode: compliant non-ASCII name not reported" ;;
     esac
 
     out=$(bash "$SELF" dir "$fail" 2>&1)
@@ -211,14 +251,66 @@ run_controls() {
             *) control_bad "reject-$case: not reported" ;;
         esac
     done
+    # Labelled in ASCII so the case identifiers stay comparable across hosts;
+    # the console may render the non-ASCII name itself as a replacement char.
+    case $out in
+        *"$uni_bad"*) control_ok "reject-unicode: non-ASCII name without final LF reported" ;;
+        *) control_bad "reject-unicode: non-ASCII name without final LF not reported" ;;
+    esac
     case $out in
         *"ignore.txt"*) control_bad "ignore-foreign-extension: reported an out-of-scope file" ;;
         *) control_ok "ignore-foreign-extension: not reported" ;;
     esac
     case $out in
-        *"5 violation"*) control_ok "reject-count: exactly five violations" ;;
+        *"6 violation"*) control_ok "reject-count: exactly six violations" ;;
         *) control_bad "reject-count: $out" ;;
     esac
+
+    # Tracked mode, three-way classification. Git is the checker's own inventory
+    # source, so the control uses it too.
+    if command -v git >/dev/null 2>&1; then
+        repo="$CONTROL_TMP/repo"
+        mkdir -p "$repo"
+        (cd "$repo" && git init -q .) >/dev/null 2>&1
+        printf 'ok\n' >"$repo/present.md"
+        printf 'ok\n' >"$repo/$uni_ok"
+        (cd "$repo" && git add -A) >/dev/null 2>&1
+
+        out2=$(bash "$SELF" tracked "$repo" 2>&1)
+        rc2=$?
+        if [ "$rc2" -eq 0 ] && printf '%s' "$out2" | grep -q '2 checked'; then
+            control_ok "tracked-unicode-ok: compliant non-ASCII tracked file accepted (exit 0)"
+        else
+            control_bad "tracked-unicode-ok: rc=$rc2 $out2"
+        fi
+
+        printf 'no newline' >"$repo/missing-lf.md"
+        (cd "$repo" && git add -A) >/dev/null 2>&1
+        out2=$(bash "$SELF" tracked "$repo" 2>&1)
+        rc2=$?
+        if [ "$rc2" -eq 1 ] && printf '%s' "$out2" | grep -q 'missing-lf.md'; then
+            control_ok "tracked-missing-lf: exit 1 and reported"
+        else
+            control_bad "tracked-missing-lf: rc=$rc2 $out2"
+        fi
+
+        printf 'x' >"$repo/gone.md"
+        (cd "$repo" && git add -A) >/dev/null 2>&1
+        rm -f "$repo/gone.md"
+        out2=$(bash "$SELF" tracked "$repo" 2>&1)
+        rc2=$?
+        if [ "$rc2" -eq 2 ] && printf '%s' "$out2" | grep -q 'not a regular file: gone.md'; then
+            control_ok "tracked-absent-file: exit 2, classified as absent rather than clean"
+        else
+            control_bad "tracked-absent-file: rc=$rc2 $out2"
+        fi
+    else
+        control_bad "tracked-classification: git is not available"
+    fi
+
+    if [ -z "${CHML_HYGIENE_NO_META:-}" ]; then
+        run_mutation_controls
+    fi
 
     if [ "$CONTROL_FAILURES" -ne 0 ]; then
         printf '%d final-newline control check(s) failed\n' "$CONTROL_FAILURES" >&2
