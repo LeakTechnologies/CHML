@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(chml C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-add_library(chml STATIC src/document.c src/style.c src/chml_io.c src/builder.c)
+add_library(chml STATIC src/document.c src/style.c src/chml_io.c src/builder.c src/chml_policy.c)
 target_include_directories(chml PUBLIC include)
 
 add_library(chml_components STATIC examples/components/components.c)
@@ -32,6 +32,14 @@ add_executable(chml_serialization_test tests/serialization_test.c)
 target_link_libraries(chml_serialization_test PRIVATE chml)
 add_test(NAME chml_serialization_test COMMAND chml_serialization_test)
 
+add_executable(chml_policy_test tests/policy_test.c)
+target_link_libraries(chml_policy_test PRIVATE chml)
+add_test(NAME chml_policy_test COMMAND chml_policy_test)
+
+add_executable(chml_depth_test tests/depth_test.c)
+target_link_libraries(chml_depth_test PRIVATE chml)
+add_test(NAME chml_depth_test COMMAND chml_depth_test)
+
 add_executable(chml_builder_test tests/builder_test.c)
 target_link_libraries(chml_builder_test PRIVATE chml_components)
 target_include_directories(chml_builder_test PRIVATE src)
@@ -54,6 +62,7 @@ add_executable(chml_atomic_identity_negative
     tests/atomic_identity_test.c
     src/document.c
     src/style.c
+    src/chml_policy.c
     tests/support/chml_io_inplace.c)
 target_include_directories(chml_atomic_identity_negative PRIVATE include src)
 add_test(NAME chml_atomic_identity_negative COMMAND chml_atomic_identity_negative)

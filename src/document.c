@@ -1,6 +1,12 @@
 #include "chml/chml.h"
 #include "chml_io.h"
 #include "chml_node.h"
+#include "chml_policy.h"
+
+/* One shared structural depth bound, matching the declarative clone limit:
+   depth 0 is the root, so a tree may be at most CHML_MAX_DEPTH + 1 levels deep.
+   Construction (clone), preflight and emission all use this definition. */
+#define CHML_MAX_DEPTH 128
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -281,15 +287,48 @@ static int has_head_in(const struct ChmlNode *n) {
     return 0;
 }
 
-static int emit(FILE *f,const struct ChmlNode *n,int *inject_charset,int raw_text) {
+static ChmlNs node_ns_of(ChmlNs parent,const struct ChmlNode *n) {
+    return chml_ns_of_element(parent,n->tag);
+}
+static ChmlNs node_child_ns(ChmlNs elem,const struct ChmlNode *n) {
+    const char *enc=NULL;
+    for(size_t i=0;i<n->attr_count;i++)
+        if(ascii_ci_equal(n->attrs[i].name,"encoding"))enc=n->attrs[i].value;
+    return chml_ns_for_children(elem,n->tag,enc);
+}
+/* Walks every serializable node and attribute before any file is opened.
+   Operational failures are propagated unchanged; only policy refusals map to
+   CHML_ERR_POLICY. */
+static ChmlStatus preflight(const struct ChmlNode *n,ChmlNs parent,unsigned depth) {
+    if(depth>CHML_MAX_DEPTH)return CHML_ERR_ARGUMENT;
+    ChmlNs elem=node_ns_of(parent,n);
+    for(size_t i=0;i<n->attr_count;i++) {
+        ChmlAttrKind ak=chml_attr_kind(elem,n->tag,n->attrs[i].name);
+        if(ak==CHML_ATTR_IGNORE)continue;
+        ChmlStatus st=chml_url_policy(elem,n->tag,n->attrs[i].name,n->attrs[i].value,ak);
+        if(st!=CHML_OK)return st;
+    }
+    ChmlNs child=node_child_ns(elem,n);
+    for(size_t i=0;i<n->child_count;i++) {
+        ChmlStatus st=preflight(n->children[i],child,depth+1);
+        if(st!=CHML_OK)return st;
+    }
+    return CHML_OK;
+}
+static int emit(FILE *f,const struct ChmlNode *n,int *inject_charset,int raw_text,ChmlNs ns,unsigned depth) {
+    if(depth>CHML_MAX_DEPTH)return 0;
     if(!n->tag) {
         if(!n->text)return 1;
         /* A raw-text parent's text children are emitted verbatim; see text_kind(). */
         return raw_text ? fputs(n->text,f)!=EOF : escaped(f,n->text,0);
     }
     if(fprintf(f,"<%s",n->tag)<0)return 0;
+    ChmlNs elem_ns=node_ns_of(ns,n);
     for(size_t i=0;i<n->attr_count;i++) {
         const ChmlAttrDef *a=&n->attrs[i];
+        ChmlAttrKind ak=chml_attr_kind(elem_ns,n->tag,a->name);
+        if(ak!=CHML_ATTR_IGNORE &&
+           chml_url_policy(elem_ns,n->tag,a->name,a->value,ak)!=CHML_OK)return 0;
         if(a->kind==CHML_ATTR_BOOLEAN) {
             if(fprintf(f," %s",a->name)<0)return 0;
         } else if(fprintf(f," %s=\"",a->name)<0 || !escaped(f,a->value,1) || fputc('"',f)==EOF) {
@@ -311,7 +350,7 @@ static int emit(FILE *f,const struct ChmlNode *n,int *inject_charset,int raw_tex
         }
     }
     for(size_t i=0;i<n->child_count;i++)
-        if(!emit(f,n->children[i],inject_charset,kind==CHML_TEXT_RAW))return 0;
+        if(!emit(f,n->children[i],inject_charset,kind==CHML_TEXT_RAW,node_child_ns(elem_ns,n),depth+1))return 0;
     return fprintf(f,"</%s>",n->tag)>=0;
 }
 typedef struct { struct ChmlNode *const *roots; size_t count; } NodeList;
@@ -325,7 +364,7 @@ static int write_node_list(FILE *f,const void *ctx) {
 
     if(fputs("<!doctype html>\n",f)==EOF)return 0;
     for(size_t i=0;i<l->count;i++)
-        if(!emit(f,l->roots[i],&inject,0))return 0;
+        if(!emit(f,l->roots[i],&inject,0,CHML_NS_HTML,0))return 0;
     return fputc('\n',f)!=EOF;
 }
 ChmlStatus chml_write_node_list(struct ChmlNode *const *roots,size_t count,const char *path) {
@@ -333,6 +372,11 @@ ChmlStatus chml_write_node_list(struct ChmlNode *const *roots,size_t count,const
     /* Charset conflicts must be rejected before the destination is opened. */
     for(size_t i=0;i<count;i++)
         if(charset_state(roots[i])<0)return CHML_ERR_ARGUMENT;
+    /* URL policy preflight: refusal must precede any filesystem operation. */
+    for(size_t i=0;i<count;i++) {
+        ChmlStatus st=preflight(roots[i],CHML_NS_HTML,0);
+        if(st!=CHML_OK)return st;
+    }
     NodeList list={roots,count};
     return chml_write_file_atomic(path,write_node_list,&list);
 }

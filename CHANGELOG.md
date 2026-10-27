@@ -1,5 +1,48 @@
 # CHML changelog
 
+## Unreleased — M0-S2b: context-sensitive URL policy (security)
+
+### Added
+
+- **URL validation for designated URL-bearing attributes**, applied before any
+  output is written: `a/area/link[href]`, `img/script/iframe/source/track/embed[src]`,
+  `form[action]`, `button/input[formaction]`, `video[poster]`, and SVG
+  `a/use/image[href|xlink:href]`.
+- **`CHML_ERR_POLICY = 4`**, appended so existing enum values are unchanged. A
+  policy refusal is now distinguishable from a malformed argument.
+- Namespace-aware traversal: `svg` is SVG for itself and its children,
+  `foreignObject` is SVG for itself and HTML for its children,
+  `math`/`annotation-xml` are handled per the restricted model, and MathML
+  URL-bearing attributes fail closed.
+- `tests/policy_test.c`: 47 assertions across nine groups, every negative case
+  run through both write APIs with status, file-creation and destination
+  preservation asserted.
+
+### Intentional breaking changes
+
+These values were previously accepted and are now rejected with
+`CHML_ERR_POLICY`:
+
+- schemes `javascript:`, `vbscript:`, `data:`, `blob:`, `file:`;
+- protocol-relative URLs (`//host/path`);
+- any backslash in a URL value;
+- leading whitespace or control characters;
+- empty values on all designated attributes except `a[href]`, `area[href]` and
+  `form[action]`;
+- the attributes `srcset`, `srcdoc` (any value, including empty), and
+  `object[data]` (any value).
+
+`mailto:` and `tel:` remain allowed on navigation attributes only.
+
+### Explicit limitations
+
+This is **not** HTML sanitization. It does not cover event-handler attributes,
+CSS `url()` or `@import`, `meta http-equiv=refresh`, `base[href]`,
+`object` beyond `data`, or any attribute outside the designated matrix. The
+stylesheet writer is a separate surface and is not subject to this policy.
+CHML output must not be described as safe for untrusted input on the strength
+of this change alone.
+
 Behaviour-affecting changes, newest first.
 
 ## Unreleased — M0.5-A transactional component builder (2026-10-27)

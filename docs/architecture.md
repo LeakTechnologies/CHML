@@ -54,3 +54,36 @@ A suite where that negative control passes is proving nothing.
 
 ## Future work
 HTML semantics and serializer hardening; CSS tokenization and at-rules; portable C23 builds; browser visual/a11y tests; server rendering; optional Wasm/browser interop.
+
+## Structural depth and lifetime contracts
+
+- **Depth convention:** the root of a document is depth 0. The maximum
+  permitted depth is **128**, so the deepest supported tree is 129 levels.
+- **Declarative construction** enforces the bound inside `clone`; a deeper
+  definition is rejected with `CHML_ERR_ARGUMENT` and nothing is added.
+- **Serialization** enforces the same bound independently in preflight, and
+  again defensively during emission. A refusal returns `CHML_ERR_ARGUMENT`
+  before the atomic writer is opened, so no destination is created and an
+  existing one is left byte-identical.
+- **Builder construction does not enforce the bound.** An over-deep tree can be
+  built and will be refused at write time. This is a deliberate M0 limitation,
+  not an oversight.
+- This bound is a **structural recursion safeguard**, not a denial-of-service
+  guarantee: a shallow tree with very many siblings can still consume
+  significant memory and time.
+
+**Declarative input lifetime.** `chml_document_add` deep-copies the supplied
+`ChmlNodeDef` tree synchronously; the caller's structures only need to be alive
+for the duration of that call. A `ChmlNodeDef` whose `children` pointer refers
+to storage that has already expired is invalid input, and constructing one — for
+example by retaining a pointer to a loop-local compound literal — is a caller
+error that CHML cannot detect.
+
+**No concurrent mutation.** Callers must not mutate or destroy a document, a
+builder, or any referenced attribute value during the interval from preflight
+through the completion of serialization. The writer does not snapshot the tree
+and CHML is not thread-safe.
+
+**Error classification.** `CHML_ERR_ARGUMENT` covers structural problems
+(depth, invalid names, void elements with content). `CHML_ERR_POLICY` is
+reserved for URL-policy refusal and never indicates a structural fault.

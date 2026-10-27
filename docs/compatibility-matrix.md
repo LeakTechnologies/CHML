@@ -39,7 +39,7 @@ about browser conformance.** No row here is backed by browser-level testing.
 | Comment nodes | Absent | No API |
 | Doctype control | Absent | Fixed output |
 | SVG / MathML foreign content | Deferred | Case-sensitive names not modelled; see open questions |
-| URL scheme security (`javascript:`, `data:`, `vbscript:`) | **Unsupported** | No scheme policy exists. Values are escaped but not validated; `href="javascript:..."` serializes verbatim through both `chml_document_add` and `chml_builder_attr_string` |
+| URL scheme security (designated attributes) | **Enforced** | Context-sensitive: http/https and relative allowed; `javascript:`, `vbscript:`, `data:`, `blob:`, `file:`, protocol-relative, backslashes and leading control characters refused with `CHML_ERR_POLICY` before any file is opened. Applies only to the designated attribute matrix — not general sanitization |
 | Unicode validity / embedded NUL | Deferred | Strings are byte sequences; NUL truncates |
 | Full attribute-name conformance | Partial | `[A-Za-z][A-Za-z0-9:_-]*` only |
 | Document structure constraints (one `html`, head/body order) | Absent | Author's responsibility |
@@ -124,6 +124,7 @@ These are the guarantees the implementation actually provides, as of M0-S1
 | Structural validity | Rejected at materialization; nothing is written before rejection | **Runtime**, not compile-time |
 | CSS | Syntax containment (no `{`, `}`, `;`, control characters) | Runtime, semantic-free |
 | Charset | UTF-8 declaration injected; conflicts rejected before the destination opens | Enforced |
+| URL policy status | `CHML_ERR_POLICY = 4` returned for policy refusal, distinct from malformed arguments | Enforced |
 | Atomic output | Temp file plus replace; failure leaves the previous artifact intact | Enforced |
 
 The C type system does **not** prevent constructing an invalid document. Invalid
