@@ -1,3 +1,13 @@
+<picture>
+  <source
+    media="(prefers-color-scheme: dark)"
+    srcset="assets/logo/CHML-logo-dark.png">
+  <img
+    src="assets/logo/CHML-logo-light.png"
+    alt="CHML logo"
+    width="512">
+</picture>
+
 # CHML — This should not exist. Unfortunately, it works.
 
 [![linux-verify](https://github.com/LeakTechnologies/CHML/actions/workflows/linux-verify.yml/badge.svg)](https://github.com/LeakTechnologies/CHML/actions/workflows/linux-verify.yml)
