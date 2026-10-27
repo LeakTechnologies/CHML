@@ -24,7 +24,7 @@ about browser conformance.** No row here is backed by browser-level testing.
 | Ordinary text escaping (`&` `<` `>`) | Tested | `serialization_test`: `a & b < c > d` |
 | Attribute value escaping (`&` `"` `<` `>`) | Tested | `serialization_test`: quoted attribute fixture |
 | Void elements (14 names) | Tested | Rejected with text or children, ASCII case-insensitive |
-| Raw-text elements: `script`, `style` | Tested | Verbatim output; end-tag hazards rejected |
+| Raw-text elements: `script`, `style` | Tested | Verbatim output; end-tag hazards rejected. **Content is never sanitized**: a `script` body is emitted as authored. Requiring trusted input is the caller's responsibility and is not enforced by the API |
 | Raw-text elements: `xmp`, `iframe`, `noembed`, `noframes` | Implemented | Same policy, no dedicated fixtures |
 | `plaintext` | Unsupported | Rejected: swallows its own end tag, cannot be well formed |
 | `noscript` | Deferred | Serialized as ordinary text; scripting-dependent semantics unimplemented |
@@ -39,7 +39,7 @@ about browser conformance.** No row here is backed by browser-level testing.
 | Comment nodes | Absent | No API |
 | Doctype control | Absent | Fixed output |
 | SVG / MathML foreign content | Deferred | Case-sensitive names not modelled; see open questions |
-| URL scheme security (`javascript:`) | Deferred | No validation |
+| URL scheme security (`javascript:`, `data:`, `vbscript:`) | **Unsupported** | No scheme policy exists. Values are escaped but not validated; `href="javascript:..."` serializes verbatim through both `chml_document_add` and `chml_builder_attr_string` |
 | Unicode validity / embedded NUL | Deferred | Strings are byte sequences; NUL truncates |
 | Full attribute-name conformance | Partial | `[A-Za-z][A-Za-z0-9:_-]*` only |
 | Document structure constraints (one `html`, head/body order) | Absent | Author's responsibility |
@@ -58,7 +58,7 @@ about browser conformance.** No row here is backed by browser-level testing.
 | Simple selectors as authored | Tested | Not parsed or validated beyond character rejection |
 | `@media` blocks | Implemented | `CHML_MEDIA_RULE`; condition passed through verbatim |
 | Any other at-rule | Absent | No API |
-| General CSS tokenizer / grammar | Unsupported | Semicolons, braces, newlines in values are rejected even when valid CSS contains them |
+| General CSS tokenizer / grammar | Unsupported | Semicolons, braces, newlines in values are rejected even when valid CSS contains them. The restriction is **syntax containment only**, not sanitization: it stops stylesheet breakout, and does not constrain values semantically (`url(...)`, `content`, `@import` through a value) |
 | Custom property *declaration* | Implemented | `--accent` works as a plain declaration |
 | Cascade, specificity, computed values | Not CHML's layer | Delegated to the browser; no claim |
 | Error recovery / partial stylesheet output | Tested | Both writers use a temporary file plus replace; a failed write removes the temporary and leaves the existing artifact intact |
@@ -110,3 +110,39 @@ Unresolved specification decisions. Do not treat any of these as settled.
 8. **Foreign content.** Case-insensitive name handling, as implemented for void
    and raw-text detection, is wrong for SVG/MathML, where names such as
    `viewBox` and `foreignObject` are case-sensitive.
+
+## Security boundary summary
+
+These are the guarantees the implementation actually provides, as of M0-S1
+(audited at 96fafbf). They are deliberately narrow.
+
+| Property | Guarantee | Type |
+| --- | --- | --- |
+| Text and attribute escaping | `&`, `<`, `>` escaped in text; `"` also escaped in attribute values | Enforced on every path |
+| URL attributes | **No scheme policy.** `javascript:`/`data:`/`vbscript:` serialize unchanged | Absent |
+| Script content | Emitted verbatim; never sanitized | Absent by design |
+| Structural validity | Rejected at materialization; nothing is written before rejection | **Runtime**, not compile-time |
+| CSS | Syntax containment (no `{`, `}`, `;`, control characters) | Runtime, semantic-free |
+| Charset | UTF-8 declaration injected; conflicts rejected before the destination opens | Enforced |
+| Atomic output | Temp file plus replace; failure leaves the previous artifact intact | Enforced |
+
+The C type system does **not** prevent constructing an invalid document. Invalid
+trees compile; they are rejected when added to a document or when serialized.
+
+### URL policy is attribute-specific
+
+A single allowlist is not sufficient. Policies are required per attribute, and
+are **not yet implemented**:
+
+| Attribute | Required policy |
+| --- | --- |
+| `href` | http, https, mailto, tel, relative; reject `javascript:`, `data:`, `vbscript:` |
+| `src` | element-dependent (script/img/iframe differ) |
+| `action`, `formaction` | strict: submission destinations |
+| `srcset` | multiple candidates, needs its own parser |
+| `srcdoc` | contains HTML, not a URL: separate policy, likely refusal |
+| `xlink:href`, SVG attributes | namespace and case-sensitivity caveats |
+
+Normalization must follow browser parsing, not prefix matching: leading and
+embedded ASCII whitespace/control characters, entity-decoded schemes, and case
+folding all change how a browser reads a URL.
