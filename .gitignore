@@ -1,0 +1,14 @@
+# Build and generated output
+build/
+build-*/
+CMakeFiles/
+CMakeCache.txt
+*.obj
+*.o
+*.a
+*.exe
+
+# Example output produced in-repo by the README instructions
+output/
+index.html
+style.css
