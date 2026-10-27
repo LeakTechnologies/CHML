@@ -123,12 +123,15 @@ else
 fi
 
 # The negative control is the whole point: a test that passes on an in-place
-# writer proves nothing. It must fail here.
+# writer proves nothing. It must fail, and it must fail for the intended reason.
 if [[ -x "$NEG_BIN" ]]; then
-    "$NEG_BIN" >"${LOG_DIR}/negative.log" 2>&1
+    neg_out="$("$NEG_BIN" 2>&1)"
     neg_rc=$?
-    if [[ $neg_rc -ne 0 ]]; then
-        record "negative control (in-place write)" PASS "discriminated, rc=${neg_rc}"
+    if [[ $neg_rc -eq 1 && "$neg_out" == *"NEGATIVE_CONTROL_REASON=identity_unchanged"* ]]; then
+        record "negative control (in-place write)" PASS "discriminated for the expected reason"
+    elif [[ $neg_rc -ne 0 ]]; then
+        printf '%s\n' "$neg_out" | sed 's/^/    /'
+        record "negative control (in-place write)" FAIL "exited ${neg_rc} for the wrong reason"
     else
         record "negative control (in-place write)" FAIL "in-place writer was not detected"
     fi

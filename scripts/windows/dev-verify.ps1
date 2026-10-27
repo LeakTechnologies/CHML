@@ -105,10 +105,15 @@ if (Test-Path $IdBin) {
     Record 'atomic replacement executed' FAIL 'identity test binary missing'
 }
 if (Test-Path $NegBin) {
-    $null = & $NegBin 2>&1
+    $negOut = (& $NegBin 2>&1 | Out-String)
     $negRc = $LASTEXITCODE
-    if ($negRc -ne 0) { Record 'negative control (in-place write)' PASS "discriminated, rc=$negRc" }
-    else { Record 'negative control (in-place write)' FAIL 'in-place writer was not detected' }
+    if ($negRc -eq 1 -and $negOut -match 'NEGATIVE_CONTROL_REASON=identity_unchanged') {
+        Record 'negative control (in-place write)' PASS 'discriminated for the expected reason'
+    } elseif ($negRc -ne 0) {
+        Record 'negative control (in-place write)' FAIL "exited $negRc for the wrong reason"
+    } else {
+        Record 'negative control (in-place write)' FAIL 'in-place writer was not detected'
+    }
 } else {
     Record 'negative control (in-place write)' FAIL 'negative binary missing'
 }

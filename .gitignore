@@ -8,6 +8,9 @@ CMakeCache.txt
 *.a
 *.exe
 
+# Logs produced by the verification workflows
+verify.log
+
 # Example output produced in-repo by the README instructions
 output/
 index.html

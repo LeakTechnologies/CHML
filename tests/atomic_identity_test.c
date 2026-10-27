@@ -73,16 +73,32 @@ int main(void) {
     printf("replace backend: %s\n", chml_replace_backend());
 
     unsigned long long id1 = 0, id2 = 0;
-    if (!write_doc("first")) { puts("FAIL: first write"); return 2; }
-    if (!file_identity(PROBE, &id1)) { puts("FAIL: first identity"); return 2; }
+    if (!write_doc("first")) {
+        puts("NEGATIVE_CONTROL_REASON=harness_error");
+        puts("FAIL: first write");
+        return 2;
+    }
+    if (!file_identity(PROBE, &id1)) {
+        puts("NEGATIVE_CONTROL_REASON=harness_error");
+        puts("FAIL: first identity");
+        return 2;
+    }
 
-    /* Flush any pooled state and force a distinct timestamp before rewriting. */
-    if (!write_doc("second")) { puts("FAIL: second write"); return 2; }
-    if (!file_identity(PROBE, &id2)) { puts("FAIL: second identity"); return 2; }
+    if (!write_doc("second")) {
+        puts("NEGATIVE_CONTROL_REASON=harness_error");
+        puts("FAIL: second write");
+        return 2;
+    }
+    if (!file_identity(PROBE, &id2)) {
+        puts("NEGATIVE_CONTROL_REASON=harness_error");
+        puts("FAIL: second identity");
+        return 2;
+    }
 
     char *content = read_all(PROBE);
     int content_ok = content && strstr(content, "<p>second</p>") != NULL;
     if (!content_ok) {
+        puts("NEGATIVE_CONTROL_REASON=harness_error");
         printf("FAIL: content is %s\n", content ? content : "(null)");
         free(content);
         remove(PROBE);
@@ -91,10 +107,16 @@ int main(void) {
     free(content);
     remove(PROBE);
 
+    /* The reason is printed so verification can distinguish the intended
+       detection from a crash or an unrelated failure carrying the same exit
+       status. Exit 1 means the intended condition; exit 2 means the harness
+       itself broke. */
     if (id1 == id2) {
+        puts("NEGATIVE_CONTROL_REASON=identity_unchanged");
         puts("RESULT: file identity unchanged -> rewritten in place (not atomic)");
         return 1;
     }
+    puts("NEGATIVE_CONTROL_REASON=none");
     puts("RESULT: file identity changed -> replaced atomically");
     return 0;
 }
