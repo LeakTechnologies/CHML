@@ -22,13 +22,17 @@ M0.4 incremental evidence:
 - M0.4-C: component architecture **evaluated, not decided.** Four candidates
   measured outside the repository; D (transactional builder over an arena)
   recommended; ADR-0004 revised and still Proposed. No production code changed.
+- M0.4-D: cross-platform verification gate **defined and partially executed.**
+  In-repository scripts for Linux and Windows; atomic replacement is asserted at
+  run time; a discriminating negative control is part of `ctest` (6 tests).
+  Windows/GCC passes. **Linux/GCC, Linux/Clang, ASan and UBSan have not been
+  executed** — no Linux host is available on the development machine.
 
 Still **open** in M0.4:
 
-- ADR-0004 decision and, only after it, implementation.
-- M0.4-D, mandatory gate: Linux POSIX atomic-write execution, strict GCC and
-  Clang builds, sanitizers, allocation-failure injection. **M0.4 is not closed
-  until M0.4-D passes.**
+- M0.4-D remainder: run `scripts/linux/dev-verify.sh` on a Linux host. **M0.4 is
+  not closed until that gate passes.**
+- ADR-0004 decision, and only then component implementation.
 - Allocation-failure injection in the production materialization and write paths.
 - CSS parsing remains M0.5.
 

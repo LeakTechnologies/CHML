@@ -15,4 +15,9 @@ typedef int (*ChmlFileWriter)(FILE *file, const void *ctx);
    for any filesystem failure. */
 ChmlStatus chml_write_file_atomic(const char *path, ChmlFileWriter writer, const void *ctx);
 
+/* Identifies the compiled replacement mechanism at run time: "win32-movefileex"
+   or "posix-rename". Verification uses this to prove the POSIX branch actually
+   executed, because compiling it is not evidence that it ran. */
+const char *chml_replace_backend(void);
+
 #endif

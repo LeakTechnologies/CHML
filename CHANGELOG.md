@@ -1,7 +1,45 @@
 # CHML changelog
 
 Behaviour-affecting changes, newest first. Test counts are for `ctest` on the
-suite as configured in `CMakeLists.txt`.
+suite as configured in `CMakeLists.txt`. The suite now has 6 tests because two
+are replacement-mechanism checks, one of which is **expected to fail by design**.
+
+## Unreleased — M0.4-D cross-platform verification (2026-10-27)
+
+### Added
+
+- **`scripts/linux/dev-verify.sh`** — Linux verification gate: toolchain check
+  without installing anything, strict GCC and Clang builds, full `ctest`,
+  AddressSanitizer and UndefinedBehaviorSanitizer runs (probed before use), a
+  run-time assertion that the POSIX replacement path executed, the atomic
+  negative control, temporary-file cleanup checks, and an example-output check.
+  Records compiler versions, log paths, per-step status and exit codes.
+- **`scripts/windows/dev-verify.ps1`** — the same structure for Windows, using
+  `gcc -fanalyzer` where the MinGW toolchain cannot link sanitizer runtimes.
+  Default is strict; `-AllowPartial` downgrades missing tools to `SKIPPED` and
+  still exits non-zero with `INCOMPLETE`.
+- **`chml_replace_backend()`** in `src/chml_io.h` — reports
+  `win32-movefileex` or `posix-rename`, so verification can prove the intended
+  branch ran. Compilation alone is not evidence.
+- **`tests/atomic_identity_test.c`** — compares file identity across two writes.
+  Built twice: against the real library (must exit 0) and against
+  `tests/support/chml_io_inplace.c` (must exit 1, registered `WILL_FAIL`).
+
+### Changed
+
+- `ctest` is now 6 tests. `chml_atomic_identity_negative` passing means the
+  in-place writer was correctly rejected; it is not a bug.
+
+### Evidence
+
+- Windows/GCC 15.2.0: strict build clean, 6/6 tests, backend asserted as
+  `win32-movefileex`, negative control discriminated (`rc=1`), no temporary
+  residue, example emits `index.html` + `style.css` with one charset
+  declaration, `gcc -fanalyzer` clean on three translation units.
+- **Not executed:** Linux/GCC, Linux/Clang, ASan, UBSan, and the POSIX
+  `rename` path. No Linux host or WSL distribution is available here; Clang and
+  sanitizer runtimes are absent from the MinGW toolchain. The Windows gate
+  therefore reports `INCOMPLETE`, not `PASSED`.
 
 ## Unreleased — M0.4-C component architecture evaluation (2026-10-27)
 

@@ -23,6 +23,14 @@ static int replace_file(const char *from, const char *to) {
 #endif
 }
 
+const char *chml_replace_backend(void) {
+#ifdef _WIN32
+    return "win32-movefileex";
+#else
+    return "posix-rename";
+#endif
+}
+
 ChmlStatus chml_write_file_atomic(const char *path, ChmlFileWriter writer, const void *ctx) {
     if (!path || !writer) return CHML_ERR_ARGUMENT;
 

@@ -15,17 +15,42 @@ Author complete, accessible web applications using standards-compliant C source;
 - The serializer has a UTF-8 policy: `<meta charset="utf-8">` is injected as the first child of an existing `<head>`, an existing UTF-8 declaration suppresses injection, and a conflicting declaration is rejected before the destination is opened. Documents without a `<head>` are treated as fragments and receive no declaration.
 - The declarative `CHML_*` macros are only safe within one function body; their compound literals do not survive a return. See `docs/decisions/ADR-0004-components-as-c-functions.md`.
 - CSS support is a deliberately limited subset. Current validation rejects semicolons/braces/newlines, including valid CSS values that contain these characters; no general CSS tokenizer/parser exists. It does not establish full CSS compatibility.
-
-See `docs/compatibility-matrix.md` for the per-feature implemented/tested/unsupported/deferred status and the open specification questions.
 - Both writers are atomic: content is written to a temporary file beside the destination and only replaces it after a complete, flushed, closed write. A failed write removes the temporary and leaves any existing artifact untouched. No allocation-failure injection tests yet.
 - Declarative macros require at least one child for `CHML_ELEMENT`; empty elements use `CHML_LEAF`.
 - Generated output has not undergone automated cross-browser, accessibility, or performance verification.
+
+See `docs/compatibility-matrix.md` for the per-feature implemented/tested/unsupported/deferred status and the open specification questions.
 
 ## Invariants
 1. No required handwritten HTML/CSS/JS application source.
 2. No proprietary C grammar or mandatory compiler fork.
 3. Never claim browser compatibility or speed without measured evidence.
 4. Keep security and ownership explicit; reject unsupported operations rather than silently altering semantics.
+
+## Verification
+
+Two scripts exist, one per host family:
+
+- `scripts/linux/dev-verify.sh` — strict GCC and Clang builds, full `ctest`,
+  AddressSanitizer and UndefinedBehaviorSanitizer runs, an assertion that the
+  POSIX replacement path actually executed, the atomic negative control, and an
+  example-output check.
+- `scripts/windows/dev-verify.ps1` — the same structure for this host, with
+  `gcc -fanalyzer` in place of the sanitizer runs the MinGW toolchain cannot
+  link.
+
+Neither script installs dependencies or changes the toolchain. Both exit
+non-zero when a required step was skipped, so an incomplete run cannot be
+mistaken for a passing one.
+
+`chml_replace_backend()` reports the compiled replacement mechanism
+(`win32-movefileex` or `posix-rename`) so verification can prove the intended
+branch ran rather than merely compiled.
+
+`tests/atomic_identity_test.c` discriminates replacement from in-place rewriting
+by comparing file identity across two writes; it is built twice, and the variant
+linked against `tests/support/chml_io_inplace.c` is registered with `WILL_FAIL`.
+A suite where that negative control passes is proving nothing.
 
 ## Future work
 HTML semantics and serializer hardening; CSS tokenization and at-rules; portable C23 builds; browser visual/a11y tests; server rendering; optional Wasm/browser interop.

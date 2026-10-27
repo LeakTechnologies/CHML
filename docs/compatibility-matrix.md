@@ -67,11 +67,15 @@ about browser conformance.** No row here is backed by browser-level testing.
 
 | Item | Status | Note |
 | --- | --- | --- |
-| ISO C11, GCC | Tested | 15.2.0, `-Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion -Wstrict-prototypes` |
-| ISO C11, Clang | Not verified | Clang is not installed on the current Windows host |
+| ISO C11, GCC (Windows) | Tested | 15.2.0 MinGW-w64/UCRT, strict flags, 6/6 tests |
+| ISO C11, GCC (Linux) | Not executed | Gate defined in `scripts/linux/dev-verify.sh`; no Linux host available yet |
+| ISO C11, Clang (Linux) | Not executed | Gate defined; Clang is not installed on the current Windows host |
+| POSIX atomic replacement (`rename`) | Not executed | Compiled only on this host; `scripts/linux/dev-verify.sh` asserts `posix-rename` at run time |
+| Win32 atomic replacement (`MoveFileExA`) | Tested | `chml_atomic_identity_test` asserts identity changes |
+| Atomic negative control (in-place write) | Tested | `chml_atomic_identity_negative`, registered `WILL_FAIL` |
 | C23 | Deferred | Target only; not compiled as C23 |
-| ASan / UBSan | Not run | Runtime libraries absent from the MinGW toolchain in use |
-| Static analysis | Tested | `gcc -fanalyzer` clean on both translation units |
+| ASan / UBSan | Not executed | MinGW has no `libasan`/`libubsan`; probed, not assumed |
+| Static analysis | Tested | `gcc -fanalyzer` clean on `document.c`, `style.c`, `chml_io.c` |
 | Fault injection (allocation failure) | Absent | No test harness |
 | Browser-level / accessibility / visual parity | Absent | No browser automation yet |
 

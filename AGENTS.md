@@ -22,12 +22,12 @@ Read `README.md`, `docs/architecture.md`, `docs/compatibility-matrix.md`, `docs/
 
 ## Current state
 
-M0.3 baseline with M0.4-A and M0.4-B complete; M0.4-C evaluated but **not decided**. Void-element content and duplicate attributes are rejected case-insensitively at materialization; text is serialized by context (ordinary / RCDATA / raw text) with raw-text end-tag hazards rejected; attributes are semantically typed (string vs boolean); `<meta charset="utf-8">` is injected into an existing `<head>` and conflicting declarations are rejected; both writers are atomic (temporary file plus replace). Stylesheet output remains a deliberately restricted CSS subset. This is not production-ready. Static example emits HTML and CSS, no client JS. The declarative macros are safe only within a single function body. See `docs/decisions/ADR-0004-components-as-c-functions.md` for the evaluated component designs, `docs/compatibility-matrix.md` for per-feature status and open questions.
+M0.3 baseline with M0.4-A, M0.4-B and M0.4-C evaluated/complete; **M0.4-D is partially executed (Windows only)**. Void-element content and duplicate attributes are rejected case-insensitively at materialization; text is serialized by context (ordinary / RCDATA / raw text) with raw-text end-tag hazards rejected; attributes are semantically typed (string vs boolean); `<meta charset="utf-8">` is injected into an existing `<head>` and conflicting declarations are rejected; both writers are atomic (temporary file plus replace); verification gates exist for both host families and exit non-zero when a step was skipped. Stylesheet output remains a deliberately restricted CSS subset. This is not production-ready. Static example emits HTML and CSS, no client JS. The declarative macros are safe only within a single function body. See `docs/decisions/ADR-0004-components-as-c-functions.md`, `docs/compatibility-matrix.md`.
 
 ## Next unit of work
 
-1. **Decide ADR-0004.** Evaluation is complete: four candidates measured, D (transactional builder over an arena) recommended, negative controls recorded. The experimental code is in `E:\Development\chml-m04c-experiments`, outside this repository. Do not implement the builder API until this ADR is reviewed.
-2. **M0.4-D, mandatory gate:** Linux POSIX execution of the atomic writer, strict GCC and Clang builds, sanitizers, and outstanding allocation-failure injection. M0.4 is **not closed** until this passes.
+1. **Finish M0.4-D:** run `scripts/linux/dev-verify.sh` on a Linux host. It must execute the POSIX `rename` path, the Clang build, and the sanitizer runs. Nothing here is proven until that gate passes; do not report M0.4 as closed before it.
+2. **Decide ADR-0004.** Evaluation complete: D recommended, negative controls recorded. Experimental code is at `E:\Development\chml-m04c-experiments`, outside this repository. Do not implement the builder API until the ADR is reviewed.
 3. Design an extensible CSS grammar and at-rule model; don't keep extending ad-hoc character rejection.
 4. Port a licensed reference page; measure semantic, accessibility, visual, and payload parity across browsers.
 

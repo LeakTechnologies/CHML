@@ -17,6 +17,20 @@ cd output
 
 Open `output/index.html` in a browser. `output/style.css` is generated from C declarations, not a handwritten CSS file.
 
+## Verification
+
+```sh
+scripts/linux/dev-verify.sh        # Linux: GCC, Clang, ASan, UBSan, POSIX path
+scripts\windows\dev-verify.ps1     # Windows: GCC, analyzer, Win32 path
+```
+
+Both scripts refuse to install dependencies, use isolated build directories, and
+exit non-zero when a required step was skipped, so a partial run cannot look
+like a pass. `ctest` currently reports 6 tests; one of them,
+`chml_atomic_identity_negative`, is **expected to fail by design** and is
+registered with `WILL_FAIL`. It proves that the suite can tell atomic
+replacement from in-place rewriting.
+
 ## Documentation
 
 - [Architecture and limitations](docs/architecture.md)

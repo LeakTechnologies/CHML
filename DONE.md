@@ -1,5 +1,52 @@
 # CHML done log
 
+## 2026-10-27 — M0.4-D cross-platform verification (partial: Windows only)
+
+Done:
+
+- In-repository verification gates: `scripts/linux/dev-verify.sh` and
+  `scripts/windows/dev-verify.ps1`. Neither installs dependencies or alters the
+  toolchain; both exit non-zero when a required step was skipped.
+- `chml_replace_backend()` so the POSIX branch can be proven at run time instead
+  of inferred from a successful compile.
+- Discriminating negative control shipped as part of `ctest`:
+  `tests/atomic_identity_test.c` built against `tests/support/chml_io_inplace.c`
+  and registered with `WILL_FAIL`.
+- Temporary-file cleanup and example-output checks added to both gates.
+
+Windows results (GCC 15.2.0 MinGW-w64/UCRT, CMake 4.2.3):
+
+```
+scripts\windows\dev-verify.ps1 -AllowPartial
+  gcc build                           PASS
+  gcc ctest                           PASS  100% tests passed, 6 tests
+  atomic replacement executed         PASS  backend=win32-movefileex
+  negative control (in-place write)   PASS  discriminated, rc=1
+  temporary cleanup                   PASS
+  example ran                         PASS
+  gcc -fanalyzer                      PASS
+  clang available                     SKIP
+  asan/ubsan available                SKIP
+  -> M0.4-D (Windows): INCOMPLETE
+```
+
+Not executed, and therefore **not claimed**:
+
+- Linux/GCC strict build and suite.
+- Linux/Clang strict build and suite.
+- POSIX `rename()` replacement path at run time.
+- AddressSanitizer and UndefinedBehaviorSanitizer.
+
+Environment limitation: this development host has no Linux, no WSL distribution,
+no Docker, no Clang, and a MinGW toolchain without `libasan`/`libubsan`. The
+Linux gate has only been syntax-checked (`bash -n`) and has never run.
+
+M0.4 is **not closed**. Running `scripts/linux/dev-verify.sh` on a Linux host is
+the outstanding gate.
+
+Also not claimed: crash durability, power-loss durability, concurrent-writer
+safety.
+
 ## 2026-10-27 — M0.4-C component architecture evaluation
 
 Done:
