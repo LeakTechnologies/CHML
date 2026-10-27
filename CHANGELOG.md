@@ -5,9 +5,9 @@
 ### Added
 
 - **URL validation for designated URL-bearing attributes**, applied before any
-  output is written: `a/area/link[href]`, `img/script/iframe/source/track/embed[src]`,
+  output is written: `a/area/link[href]`, `img/script/iframe/source/track/embed/audio/video/input[src]`,
   `form[action]`, `button/input[formaction]`, `video[poster]`, and SVG
-  `a/use/image[href|xlink:href]`.
+  `a/use/image/script[href|xlink:href]`.
 - **`CHML_ERR_POLICY = 4`**, appended so existing enum values are unchanged. A
   policy refusal is now distinguishable from a malformed argument.
 - Namespace-aware traversal: `svg` is SVG for itself and its children,
@@ -42,6 +42,41 @@ CSS `url()` or `@import`, `meta http-equiv=refresh`, `base[href]`,
 stylesheet writer is a separate surface and is not subject to this policy.
 CHML output must not be described as safe for untrusted input on the strength
 of this change alone.
+
+### Review remediation (independent adversarial review of PR #1)
+
+Four defects were found after the first Linux gate passed, and are fixed here:
+
+- **`xlink:href` was matched case-sensitively** while every other attribute name
+  was matched case-insensitively. Because the HTML tokenizer lowercases
+  attribute names before mapping `xlink:href` into the XLink namespace,
+  `XLINK:HREF="javascript:..."` on an SVG `a`, `use` or `image` was not
+  classified as a URL attribute at all, and serialized unchanged. Confirmed in
+  Chromium: the emitted attribute acted as a link and executed the script on
+  click. All name comparisons are now ASCII case-insensitive.
+- **SVG `script[href]`/`script[xlink:href]` were ungoverned.** Confirmed in
+  Chromium: `<svg><script href="data:text/javascript,...">` loads and runs the
+  resource. The policy refused `data:` on HTML `script[src]` but not here, which
+  made that refusal bypassable. SVG `script` is now a governed element.
+- **`audio[src]`, `video[src]` and `input[src]` were ungoverned** while
+  `img[src]` and `source[src]` were. These are the same resource-loading class
+  and are now governed. `link[imagesrcset]` is now refused, for the same reason
+  `srcset` is: it carries a candidate list that needs its own parser.
+- **Documentation contradicted itself**: the security-boundary summary still
+  stated "No scheme policy" and "not yet implemented" while the status table
+  stated "Enforced". The summary is reconciled and the exclusions are now
+  enumerated explicitly.
+
+Two smaller consistency fixes: the declarative clone bound now uses the shared
+`CHML_MAX_DEPTH` constant instead of a second literal `128`, and the two
+Markdown files that lacked a final newline now have one.
+
+Known follow-up, not addressed here: a policy refusal detected during emission
+(rather than preflight) would be reported as `CHML_ERR_IO`, because the writer
+maps any writer failure to I/O. The path is currently unreachable — preflight
+runs the same logic first — but the classification would be wrong if the two
+ever diverge.
+
 
 Behaviour-affecting changes, newest first.
 

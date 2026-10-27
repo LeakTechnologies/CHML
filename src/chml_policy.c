@@ -11,7 +11,6 @@ static int eq_ci(const char *a, const char *b) {
         if (!ca) return 1;
     }
 }
-static int eq_cs(const char *a, const char *b) { return strcmp(a, b) == 0; }
 
 static int name_in_ci(const char *tag, const char *const *list, size_t n) {
     for (size_t i = 0; i < n; i++) if (eq_ci(tag, list[i])) return 1;
@@ -39,9 +38,18 @@ ChmlNs chml_ns_for_children(ChmlNs elem_ns, const char *tag, const char *encodin
 ChmlAttrKind chml_attr_kind(ChmlNs ns, const char *element, const char *attribute) {
     if (!element || !attribute) return CHML_ATTR_IGNORE;
 
+    /* Every name comparison here is ASCII case-insensitive, including
+       xlink:href. CHML serializes HTML, and the HTML tokenizer lowercases
+       attribute names before the foreign-attribute adjustment maps
+       xlink:href into the XLink namespace, so XLINK:HREF and xlink:href are
+       the same attribute to a browser. Matching foreign attributes
+       case-sensitively would let a capitalization change bypass the policy. */
+
     /* Refused outright, before any value rule. */
     if (ns == CHML_NS_HTML) {
-        if (eq_ci(attribute, "srcset") || eq_ci(attribute, "srcdoc")) return CHML_ATTR_REFUSED;
+        if (eq_ci(attribute, "srcset") || eq_ci(attribute, "imagesrcset") ||
+            eq_ci(attribute, "srcdoc"))
+            return CHML_ATTR_REFUSED;
         if (eq_ci(element, "object") && eq_ci(attribute, "data")) return CHML_ATTR_REFUSED;
     }
 
@@ -53,9 +61,12 @@ ChmlAttrKind chml_attr_kind(ChmlNs ns, const char *element, const char *attribut
     }
 
     if (ns == CHML_NS_SVG) {
-        static const char *const elems[] = { "a", "use", "image" };
+        /* script is included because an SVG script element loads and runs the
+           resource named by href/xlink:href: a data: value there executes in
+           the browser, which the HTML script[src] rule already refuses. */
+        static const char *const elems[] = { "a", "use", "image", "script" };
         if (!name_in_ci(element, elems, sizeof elems / sizeof *elems)) return CHML_ATTR_IGNORE;
-        if (eq_cs(attribute, "xlink:href") || eq_ci(attribute, "href")) return CHML_ATTR_URL;
+        if (eq_ci(attribute, "xlink:href") || eq_ci(attribute, "href")) return CHML_ATTR_URL;
         return CHML_ATTR_IGNORE;
     }
 
@@ -64,7 +75,10 @@ ChmlAttrKind chml_attr_kind(ChmlNs ns, const char *element, const char *attribut
         return name_in_ci(element, nav, sizeof nav / sizeof *nav) ? CHML_ATTR_URL : CHML_ATTR_IGNORE;
     }
     if (eq_ci(attribute, "src")) {
-        static const char *const res[] = { "img", "script", "iframe", "source", "track", "embed" };
+        /* audio, video and input[type=image] load external resources exactly as
+           img does; governing one and not the others is not defensible. */
+        static const char *const res[] = { "img", "script", "iframe", "source", "track",
+                                           "embed", "audio", "video", "input" };
         return name_in_ci(element, res, sizeof res / sizeof *res) ? CHML_ATTR_URL : CHML_ATTR_IGNORE;
     }
     if (eq_ci(attribute, "action") && eq_ci(element, "form")) return CHML_ATTR_URL;

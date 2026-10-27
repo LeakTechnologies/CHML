@@ -114,6 +114,76 @@ static void expect_ok(const char *label, const char *elem, const char *attr,
     }
 }
 
+/* Nested SVG negative case: parent element wrapping the element under test.
+   Exercises the declarative path, the builder path, and preservation of an
+   existing destination, all through the real serialization entry points. */
+static ChmlStatus svg_via_document(const char *inner_tag, const char *attr,
+                                   const char *value, const char *path) {
+    ChmlDocument *d = chml_document_create();
+    if (!d) return CHML_ERR_MEMORY;
+    ChmlAttrDef a[1];
+    a[0].name = attr;
+    a[0].value = value;
+    a[0].kind = CHML_ATTR_STRING;
+    ChmlNodeDef inner = CHML_LEAF_ATTRS(inner_tag, a, 1);
+    ChmlNodeDef svg = CHML_ELEMENT("svg", inner);
+    ChmlStatus st = chml_document_add(d, &svg);
+    if (st == CHML_OK) st = chml_document_write(d, path);
+    chml_document_destroy(d);
+    return st;
+}
+
+static ChmlStatus svg_via_builder(const char *inner_tag, const char *attr,
+                                 const char *value, const char *path) {
+    ChmlBuilder *b = chml_builder_create();
+    if (!b) return CHML_ERR_MEMORY;
+    ChmlNode *svg = NULL, *inner = NULL;
+    ChmlStatus st = chml_builder_begin(b, "svg", &svg);
+    if (st == CHML_OK) st = chml_builder_element(b, svg, inner_tag, &inner);
+    if (st == CHML_OK) st = chml_builder_attr_string(b, inner, attr, value);
+    if (st == CHML_OK) st = chml_builder_attach(b, svg, NULL);
+    if (st == CHML_OK) st = chml_builder_write(b, path);
+    chml_builder_destroy(b);
+    return st;
+}
+
+/* SVG negative case: policy status, no destination created, existing
+   destination preserved, through both write APIs. */
+static void expect_svg_refused(const char *label, const char *inner_tag,
+                               const char *attr, const char *value) {
+    char path[128];
+    snprintf(path, sizeof path, "pol_svg_neg_%d.html", failures + (int)strlen(label));
+
+    remove(path);
+    ChmlStatus a = svg_via_document(inner_tag, attr, value, path);
+    int created = 0;
+    { FILE *f = fopen(path, "rb"); if (f) { created = 1; fclose(f); } remove(path); }
+
+    ChmlStatus b = svg_via_builder(inner_tag, attr, value, path);
+    int created_b = 0;
+    { FILE *f = fopen(path, "rb"); if (f) { created_b = 1; fclose(f); } }
+    remove(path);
+
+    const char *sentinel = "<!doctype html>\n<p>previous</p>\n";
+    FILE *f = fopen(path, "wb"); if (f) { fputs(sentinel, f); fclose(f); }
+    ChmlStatus c = svg_via_document(inner_tag, attr, value, path);
+    char got[256] = {0};
+    slurp(path, got, sizeof got);
+    int preserved = (strcmp(got, sentinel) == 0);
+    remove(path);
+
+    int good = (a == CHML_ERR_POLICY) && (b == CHML_ERR_POLICY) &&
+               !created && !created_b && (c == CHML_ERR_POLICY) && preserved;
+    if (good) ok(label);
+    else {
+        char detail[200];
+        snprintf(detail, sizeof detail,
+                 "doc=%d builder=%d created=%d/%d preserved=%d",
+                 (int)a, (int)b, created, created_b, preserved);
+        bad(label, detail);
+    }
+}
+
 int main(void) {
     puts("P1 schemes");
     expect_ok("https allowed", "a", "href", "https://example.com/x", "href=\"https://example.com/x\"");
@@ -153,6 +223,13 @@ int main(void) {
     expect_refused("formaction javascript", "button", "formaction", "javascript:x");
     expect_refused("poster javascript", "video", "poster", "javascript:x");
     expect_ok("action https", "form", "action", "https://example.com/s", NULL);
+    /* Review finding F3: resource-loading src was governed on img/source but not
+       on audio, video or input[type=image]. */
+    expect_refused("audio[src] data refused", "audio", "src", "data:audio/mp3;base64,AA");
+    expect_refused("video[src] javascript refused", "video", "src", "javascript:x");
+    expect_refused("input[src] javascript refused", "input", "src", "javascript:x");
+    expect_ok("video[src] https allowed", "video", "src", "https://example.com/v.mp4", NULL);
+    expect_ok("audio[src] relative allowed", "audio", "src", "media/a.mp3", NULL);
 
     puts("P5 empty values");
     expect_ok("a[href] empty allowed", "a", "href", "", "href=\"\"");
@@ -214,9 +291,32 @@ int main(void) {
         else bad("foreignObject children take HTML policy", "not refused");
     }
 
+    puts("P6b foreign attribute name case");
+    /* The HTML tokenizer lowercases attribute names, so every capitalization of
+       xlink:href must receive the same policy. Review finding F1: matching it
+       case-sensitively let XLINK:HREF carry javascript: to the browser. */
+    expect_svg_refused("SVG a[XLINK:HREF] javascript refused", "a", "XLINK:HREF", "javascript:x");
+    expect_svg_refused("SVG a[XLink:href] javascript refused", "a", "XLink:href", "javascript:x");
+    expect_svg_refused("SVG a[xlink:HREF] javascript refused", "a", "xlink:HREF", "javascript:x");
+    expect_svg_refused("SVG use[XLINK:HREF] javascript refused", "use", "XLINK:HREF", "javascript:x");
+    expect_svg_refused("SVG image[XLINK:HREF] javascript refused", "image", "XLINK:HREF", "javascript:x");
+    expect_svg_refused("SVG a[XLINK:HREF] data refused", "a", "XLINK:HREF", "data:text/html,x");
+    expect_svg_refused("SVG a[XLINK:HREF] //host refused", "a", "XLINK:HREF", "//evil.example/x");
+    expect_svg_refused("SVG a[HREF] javascript refused", "a", "HREF", "javascript:x");
+
+    puts("P6c foreign script sources");
+    /* Demonstrated in Chromium: <svg><script href="data:text/javascript,...">
+       loads and runs. The resource attribute is therefore in scope. */
+    expect_svg_refused("SVG script[href] data refused", "script", "href",
+                       "data:text/javascript,window.x=1");
+    expect_svg_refused("SVG script[xlink:href] data refused", "script", "xlink:href",
+                       "data:text/javascript,window.x=1");
+    expect_svg_refused("SVG script[HREF] javascript refused", "script", "HREF", "javascript:x");
+
     puts("P7 prohibited attributes");
     expect_refused("srcset refused", "img", "srcset", "a.png 1x, javascript:x 2x");
     expect_refused("srcset empty refused", "img", "srcset", "");
+    expect_refused("imagesrcset refused", "link", "imagesrcset", "a.png 1x, javascript:x 2x");
     expect_refused("srcdoc refused", "iframe", "srcdoc", "<script>x</script>");
     expect_refused("srcdoc empty refused", "iframe", "srcdoc", "");
     expect_refused("object[data] refused", "object", "data", "https://example.com/x");

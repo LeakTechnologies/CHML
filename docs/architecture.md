@@ -87,3 +87,25 @@ and CHML is not thread-safe.
 **Error classification.** `CHML_ERR_ARGUMENT` covers structural problems
 (depth, invalid names, void elements with content). `CHML_ERR_POLICY` is
 reserved for URL-policy refusal and never indicates a structural fault.
+
+## URL policy decisions
+
+- **Names are matched ASCII case-insensitively**, including `xlink:href`. CHML
+  emits HTML; the HTML tokenizer lowercases attribute names and then maps
+  `xlink:href` into the XLink namespace. Matching foreign attribute names
+  case-sensitively would let `XLINK:HREF` bypass the policy while still acting
+  as a link in the browser.
+- **SVG `script` is a governed element.** An SVG script element loads and runs
+  the resource named by `href`/`xlink:href`; a `data:` value there executes.
+  Governing HTML `script[src]` while ignoring the SVG form would leave the
+  refusal of `data:` trivially bypassable.
+- **Refusal happens in preflight**, before the atomic writer opens a temporary
+  file. A policy refusal therefore creates no destination and leaves an
+  existing one byte-identical. The check is repeated defensively during
+  emission.
+- **This is not sanitization.** The policy bounds the scheme of an enumerated
+  set of URL-bearing attributes. Attribute content is escaped, never filtered;
+  inline script text is emitted as authored; event handlers, CSS `url()`,
+  `meta refresh`, `base[href]` and the stylesheet writer are outside it.
+  CHML output must not be described as safe for untrusted input on the strength
+  of this policy alone.

@@ -158,7 +158,7 @@ static ChmlStatus text_content(const ChmlNodeDef *src,char **out) {
 }
 
 static ChmlStatus clone(struct ChmlNode *out,const ChmlNodeDef *src,unsigned depth) {
-    if(!src || depth>128 || (src->tag && !valid_name(src->tag)) || (!src->tag && (src->child_count || src->attribute_count)) || (src->child_count && !src->children) || (src->attribute_count && !src->attributes)) return CHML_ERR_ARGUMENT;
+    if(!src || depth>CHML_MAX_DEPTH || (src->tag && !valid_name(src->tag)) || (!src->tag && (src->child_count || src->attribute_count)) || (src->child_count && !src->children) || (src->attribute_count && !src->attributes)) return CHML_ERR_ARGUMENT;
     if(src->tag && is_void(src->tag) && (src->text || src->child_count)) return CHML_ERR_ARGUMENT;
     if(src->tag && is_plaintext(src->tag)) return CHML_ERR_ARGUMENT;
     if(src->tag) {
