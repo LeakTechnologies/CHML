@@ -68,15 +68,16 @@ about browser conformance.** No row here is backed by browser-level testing.
 | Item | Status | Note |
 | --- | --- | --- |
 | ISO C11, GCC (Windows) | Tested | 15.2.0 MinGW-w64/UCRT, strict flags, 6/6 tests |
-| ISO C11, GCC (Linux) | Blocked | Gate defined; GitHub Actions job never starts (private repo, account billing) |
-| ISO C11, Clang (Linux) | Blocked | Gate defined; same blocker |
-| POSIX atomic replacement (`rename`) | Blocked | Compiled only on this host; the Linux gate has never executed |
-| GitHub Actions Linux gate | Blocked | Workflow `linux-verify.yml` exists; run 40547489801 failed with 0 steps executed |
+| ISO C11, GCC (Linux) | Tested | 13.3.0 on Ubuntu 24.04.5, strict flags, 6/6 tests |
+| ISO C11, Clang (Linux) | Tested | 18.1.3 on Ubuntu 24.04.5, strict flags, 6/6 tests |
+| POSIX atomic replacement (`rename`) | Tested | `backend=posix-rename`, file identity changes across writes |
 | Win32 atomic replacement (`MoveFileExA`) | Tested | `chml_atomic_identity_test` asserts identity changes |
-| Atomic negative control (in-place write) | Tested | `chml_atomic_identity_negative`, registered `WILL_FAIL` |
+| Atomic negative control (in-place write) | Tested | `chml_atomic_identity_negative`, fails with reason `identity_unchanged` |
+| GitHub Actions Linux gate | Tested | runs 40548472675, 40548731375 (success) |
 | C23 | Deferred | Target only; not compiled as C23 |
-| ASan / UBSan | Not executed | MinGW has no `libasan`/`libubsan`; probed, not assumed |
-| Static analysis | Tested | `gcc -fanalyzer` clean on `document.c`, `style.c`, `chml_io.c` |
+| ASan | Tested | instrumentation proven: flag in command + `__asan_` symbols; 6/6 |
+| UBSan | Tested | instrumentation proven: flag in command + `__ubsan_` symbols; 6/6 |
+| Static analysis | Tested | `gcc -fanalyzer` clean on `document.c`, `style.c`, `chml_io.c` (Windows) |
 | Fault injection (allocation failure) | Absent | No test harness |
 | Browser-level / accessibility / visual parity | Absent | No browser automation yet |
 

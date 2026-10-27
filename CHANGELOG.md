@@ -4,6 +4,37 @@ Behaviour-affecting changes, newest first. Test counts are for `ctest` on the
 suite as configured in `CMakeLists.txt`. The suite now has 6 tests because two
 are replacement-mechanism checks, one of which is **expected to fail by design**.
 
+## Unreleased — M0.4-D4 Linux verification executed (2026-10-27)
+
+M0.4-D is satisfied: the Linux gate has real execution evidence.
+
+### Changed
+
+- Repository visibility changed from private to **public** (user-authorised) to
+  remove metered Actions minutes from the blocker. No billing settings, payment
+  methods or spending limits were touched. The account's billing restriction
+  itself remains unresolved.
+- Sanitizer verification strengthened: builds run verbosely and a sanitizer step
+  must show the flag in the compiler command **and** runtime evidence in the
+  binary (`ldd` for dynamic, `__asan_`/`__ubsan_` symbols for static). Previously
+  a build that silently dropped `-fsanitize` would have passed.
+- Local absolute paths removed from documentation before publication.
+
+### Evidence
+
+Ubuntu 24.04.5, kernel 6.17.0-1022-azure, CMake 3.31.6, GCC 13.3.0,
+Clang 18.1.3. Runs `40548472675` and `40548731375`, both `success`.
+
+Strict GCC and Clang builds clean; 6/6 tests in all four configurations;
+`posix-rename` backend confirmed at run time; negative control discriminated for
+the expected reason; no temporary residue; example output correct; ASan and UBSan
+instrumentation proven present.
+
+### Not claimed
+
+Crash durability, power-loss durability, concurrent-writer safety, browser
+conformance, performance. The workflow's failure path has not been exercised.
+
 ## Unreleased — M0.4-D2 Linux verification execution (2026-10-27)
 
 ### Added

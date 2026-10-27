@@ -1,5 +1,7 @@
 # CHML — This should not exist. Unfortunately, it works.
 
+[![linux-verify](https://github.com/LeakTechnologies/CHML/actions/workflows/linux-verify.yml/badge.svg)](https://github.com/LeakTechnologies/CHML/actions/workflows/linux-verify.yml)
+
 Experimental C-native web authoring prototype. Write HTML document structure and CSS style declarations as **ordinary ISO C**; generate browser-native `index.html` and `style.css`.
 
 **Status:** Early proof of concept, not a fully compliant web platform. The current build targets C11; C23 is a long-term goal. No JavaScript or WebAssembly is required for this static example.
@@ -23,6 +25,10 @@ Open `output/index.html` in a browser. `output/style.css` is generated from C de
 scripts/linux/dev-verify.sh        # Linux: GCC, Clang, ASan, UBSan, POSIX path
 scripts\windows\dev-verify.ps1     # Windows: GCC, analyzer, Win32 path
 ```
+
+The Linux gate also runs in CI on every push and pull request to `master`
+(`.github/workflows/linux-verify.yml`), on Ubuntu 24.04 with GCC 13.3.0 and
+Clang 18.1.3.
 
 Both scripts refuse to install dependencies, use isolated build directories, and
 exit non-zero when a required step was skipped, so a partial run cannot look

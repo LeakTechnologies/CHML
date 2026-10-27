@@ -26,9 +26,11 @@ M0.3 baseline with M0.4-A, M0.4-B and M0.4-C evaluated/complete; **M0.4-D is par
 
 ## Next unit of work
 
-1. **Unblock Linux verification (M0.4-D2).** The workflow exists and triggers, but GitHub will not start the job: the repository is private and the account's Actions payment or spending limit is failing. Options, all requiring your decision: fix billing, make the repository public, or run `scripts/linux/dev-verify.sh` on any Linux host. Do not report M0.4 as closed until it produces real output.
-2. **Decide ADR-0004.** Evaluation complete: D recommended, negative controls recorded. The experimental code is kept outside this repository and is not committed. Do not implement the builder API until the ADR is reviewed.
+1. **Decide ADR-0004** — this is the only thing blocking M0.5. Evaluation is complete: four candidates measured, D (transactional builder over an arena) recommended, negative controls recorded. The experimental code is kept outside this repository. Do not implement the builder API until the ADR is reviewed.
+2. **Allocation-failure injection** for the production materialization and write paths (carried over from ADR-0003).
 3. Design an extensible CSS grammar and at-rule model; don't keep extending ad-hoc character rejection.
 4. Port a licensed reference page; measure semantic, accessibility, visual, and payload parity across browsers.
+
+M0.4 is complete. The Linux gate runs automatically on every push to `master`.
 
 For each unit, provide changed files, tests, known limitations, and evidence. Do not mark proposed ADRs accepted without review.

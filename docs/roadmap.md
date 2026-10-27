@@ -22,18 +22,14 @@ M0.4 incremental evidence:
 - M0.4-C: component architecture **evaluated, not decided.** Four candidates
   measured outside the repository; D (transactional builder over an arena)
   recommended; ADR-0004 revised and still Proposed. No production code changed.
-- M0.4-D: cross-platform verification gate **defined and partially executed.**
-  In-repository scripts for Linux and Windows; atomic replacement is asserted at
-  run time; a discriminating negative control is part of `ctest` (6 tests).
-  Windows/GCC passes. A GitHub Actions workflow now runs the Linux gate, but
-  **the job never starts**: the repository is private and the account's Actions
-  billing is failing. Linux/GCC, Linux/Clang, ASan, UBSan and the POSIX path
-  remain **unexecuted**.
+- M0.4-D: **satisfied.** Windows/GCC and Linux/GCC and Linux/Clang strict
+  builds pass, ASan and UBSan run with proven instrumentation, the POSIX
+  `rename` path executes (`backend=posix-rename`), and the atomic negative
+  control discriminates for the expected reason. Runs `40548472675` and
+  `40548731375` on Ubuntu 24.04.5, GCC 13.3.0, Clang 18.1.3.
 
-Still **open** in M0.4:
+M0.4 is complete. Remaining, not part of M0.4:
 
-- M0.4-D remainder: run `scripts/linux/dev-verify.sh` on a Linux host. **M0.4 is
-  not closed until that gate passes.**
 - ADR-0004 decision, and only then component implementation.
 - Allocation-failure injection in the production materialization and write paths.
 - CSS parsing remains M0.5.

@@ -1,5 +1,79 @@
 # CHML done log
 
+## 2026-10-27 — M0.4-D4 Linux verification executed (M0.4-D satisfied)
+
+The account's Actions billing restriction was not lifted. Instead the repository
+was made **public**, which removes metered minutes from the equation; the user
+authorised that change explicitly. The workflow then executed on a real Linux
+runner.
+
+Environment (from the run itself):
+
+| Item | Value |
+| --- | --- |
+| Runner | `ubuntu-latest` → Ubuntu 24.04.5 LTS, `ubuntu-24.04` image 20261012.334.1 |
+| Kernel | Linux 6.17.0-1022-azure x86_64 |
+| CMake / CTest | 3.31.6 |
+| GCC | 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1) |
+| Clang | Ubuntu clang 18.1.3 (1ubuntu1) |
+
+Runs:
+
+- `40548472675` — first execution, **33 s, success**.
+- `40548731375` — after the instrumentation proof was added, **success**.
+
+Gate result (all PASS):
+
+```
+gcc build / gcc ctest            strict clean, 6/6
+clang build / clang ctest        strict clean, 6/6
+posix branch executed            backend=posix-rename, identity changed
+negative control (in-place write) discriminated for the expected reason
+temporary file cleanup           no *.tmpN residue
+asan build / asan ctest          strict clean, 6/6
+asan instrumentation             flag applied; __asan_ present
+ubsan build / ubsan ctest        strict clean, 6/6
+ubsan instrumentation            flag applied; __ubsan_ present
+example ran                      index.html + style.css, 1 charset, no temp
+```
+
+Defect found and fixed by review, not by a failure: the first run passed ASan and
+UBSan but could not prove the flags reached the compiler, because CMake does not
+echo `CMAKE_C_FLAGS` during configure. Builds are now verbose and a sanitizer
+step requires both the flag in the compiler command and runtime evidence in the
+binary (`ldd` for a dynamic runtime, `__asan_`/`__ubsan_` symbols for a static
+one). Both platforms now link the runtime statically and the symbol check is what
+proves it.
+
+Not claimed: crash durability, power-loss durability, concurrent-writer safety,
+browser conformance, performance.
+
+Still unexercised: the workflow's failure path. `continue-on-error` plus an
+explicit failing step is structurally correct, but no run has deliberately failed
+the gate to prove the job turns red.
+
+## 2026-10-27 — M0.4-D3 WSL2 environment assessment (read-only, no changes)
+
+Assessed as an alternative to hosted CI. Nothing was installed or enabled.
+
+| Item | Finding |
+| --- | --- |
+| Windows | 11 Pro 10.0.26200, 64-bit |
+| WSL2 app | `MicrosoftCorporationII.WindowsSubsystemForLinux` 2.6.3.0, kernel 6.6.87.2-1 |
+| Distributions | none installed |
+| CPU | AMD Ryzen 5 2600, SLAT present |
+| **Virtualization in firmware** | **disabled** — `VirtualizationFirmwareEnabled=False` and `systeminfo` "Virtualization Enabled In Firmware: No" |
+| Hypervisor running | no; VBS off, so the reading is not masked |
+| Disk free (C:) | 38.7 GB |
+| Optional feature state | **not determinable**: `dism` returns error 740 without elevation |
+| Secure Boot state | **not determinable**: `Confirm-SecureBootUEFI` denied |
+
+Conclusion: WSL2 is blocked by a UEFI setting, not by software. Enabling AMD-V
+requires a firmware change and a reboot, and the machine shows a Parsec virtual
+display adapter, so physical access may not be available. Rejected in favour of
+hosted CI. No firmware, boot, Secure Boot or bootloader change was made.
+
+
 ## 2026-10-27 — M0.4-D2 Linux verification execution (blocked before execution)
 
 Done:
