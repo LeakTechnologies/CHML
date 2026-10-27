@@ -1,8 +1,47 @@
 # CHML changelog
 
-Behaviour-affecting changes, newest first. Test counts are for `ctest` on the
-suite as configured in `CMakeLists.txt`. The suite now has 6 tests because two
-are replacement-mechanism checks, one of which is **expected to fail by design**.
+Behaviour-affecting changes, newest first.
+
+## Unreleased — M0.5-A transactional component builder (2026-10-27)
+
+### Added
+
+- `include/chml/builder.h`: experimental transactional builder — detached
+  session construction, elements, text nodes, string and boolean attributes,
+  marks with rollback, attach with ownership transfer, discard, atomic write.
+- `src/builder.c`: region-based storage. Each session is its own arena region;
+  attach splices its blocks into the document region; discard frees them.
+- `src/chml_node.h`: one shared node representation and one serializer for both
+  front-ends. `chml_write_node_list` is now the single write path used by
+  `chml_document_write` and the builder.
+- `examples/components/`: `PageLayout`, `Navigation`, `Card` reference
+  components and a site example.
+- `tests/builder_test.c`: 7 test groups, 15 deterministic allocation-failure
+  points, ownership rejections, and byte-identical parity with the declarative
+  path.
+- ADR-0005 (Proposed) recording the transaction model and its open questions.
+  ADR-0004 moved to **Accepted** for its principles only.
+
+### Changed
+
+- `struct ChmlNode.children` is now an array of pointers rather than a
+  contiguous node array, so builder and declarative nodes share one layout.
+  Serialization and escaping are unchanged; parity is asserted byte-for-byte.
+- Construction is session-scoped: document-owned nodes accept content only
+  through `chml_builder_attach`, never by direct mutation.
+
+### Defects found and fixed during implementation
+
+1. Rollback restored `children` but not `child_cap`, so the next append wrote
+   through a NULL array (segfault).
+2. `chml_builder_begin` could fail after allocating its root, leaving a block in
+   a session that never opened and therefore could never be discarded.
+
+### Evidence
+
+Strict GCC 15.2.0 C11 clean; 7/7 tests. Negative control: making rollback a
+no-op fails three checks. Rollback and discard both return the builder to its
+pre-component byte count.
 
 ## Unreleased — M0.4-D4 Linux verification executed (2026-10-27)
 

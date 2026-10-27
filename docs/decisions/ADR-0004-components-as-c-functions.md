@@ -1,6 +1,24 @@
 # ADR-0004 — Reusable components as ordinary C functions
 
-Status: **Proposed** (evaluated 2026-10-27; not accepted)
+Status: **Accepted** (2026-10-27) for the principles below.
+The transaction API is *not* decided by this ADR; see ADR-0005.
+
+## Accepted principles
+
+1. **Document-owned storage** for committed nodes.
+2. **Stable identity and address** for committed nodes until document destruction.
+3. **Text as a first-class node type** (`tag == NULL`), not merely an element field.
+4. **Semantic attributes**: string-valued and boolean-valued are distinct kinds.
+5. **Ordinary ISO C11 functions** as reusable components.
+6. **No manual child-array sizing** in normal authoring.
+7. **No escaping pointers to temporary compound literals**; the `CHML_*` macros
+   are single-function-scoped.
+8. **Explicit error propagation** and defined failure cleanup.
+9. **Preservation of the declarative API** for immediate materialization.
+
+Anything about the *shape* of the transaction API, ownership transfer, rollback
+and attachment semantics is deferred to ADR-0005 and is not accepted here.
+
 
 ## Question
 

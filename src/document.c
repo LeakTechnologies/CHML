@@ -1,18 +1,12 @@
 #include "chml/chml.h"
 #include "chml_io.h"
+#include "chml_node.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdint.h>
 
-struct ChmlNode {
-    char *tag, *text;
-    ChmlAttrDef *attrs;
-    size_t attr_count;
-    struct ChmlNode *children;
-    size_t child_count;
-};
 struct ChmlDocument { struct ChmlNode *roots; size_t root_count; };
 
 static char *copy(const char *s) {
@@ -26,7 +20,11 @@ static void free_node(struct ChmlNode *n) {
     free(n->tag); free(n->text);
     for(size_t i=0;i<n->attr_count;i++) { free((void*)n->attrs[i].name);free((void*)n->attrs[i].value); }
     free(n->attrs);
-    for(size_t i=0;i<n->child_count;i++) free_node(&n->children[i]);
+    for(size_t i=0;i<n->child_count;i++) {
+        if(!n->children[i]) continue;
+        free_node(n->children[i]);
+        free(n->children[i]);
+    }
     free(n->children);
     memset(n,0,sizeof(*n));
 }
@@ -35,6 +33,7 @@ static int valid_name(const char *s) {
     for(;*s;s++) if(!isalnum((unsigned char)*s) && *s!='-' && *s!='_' && *s!=':') return 0;
     return 1;
 }
+int chml_name_valid(const char *s) { return valid_name(s); }
 /* HTML element and attribute names are ASCII case-insensitive. Compare with an
    explicit ASCII fold so behaviour does not depend on the process locale. */
 static unsigned char ascii_fold(unsigned char c) {
@@ -105,6 +104,25 @@ static int has_end_tag_hazard(const char *text,const char *tag) {
 
 static int is_aria(const char *name) { return ascii_ci_prefix(name,"aria-"); }
 
+/* Shared attribute rules. A boolean attribute carries no value and is never an
+   ARIA attribute; a string attribute always carries one. */
+ChmlStatus chml_attr_validate(const ChmlAttrDef *a) {
+    if(!a || !valid_name(a->name)) return CHML_ERR_ARGUMENT;
+    switch(a->kind) {
+        case CHML_ATTR_STRING:
+            if(!a->value) return CHML_ERR_ARGUMENT;
+            return CHML_OK;
+        case CHML_ATTR_BOOLEAN:
+            /* Never reinterpret a string such as "false"; that distinction
+               belongs to the author. ARIA attributes are never HTML booleans. */
+            if(a->value) return CHML_ERR_ARGUMENT;
+            if(is_aria(a->name)) return CHML_ERR_ARGUMENT;
+            return CHML_OK;
+        default:
+            return CHML_ERR_ARGUMENT;
+    }
+}
+
 /* Collects the content of a text-only element (its own .text plus every text
    child, in serialization order) so the end-tag hazard check sees the whole
    run. *out is NULL for an empty element. Fails closed: any allocation failure
@@ -162,21 +180,7 @@ static ChmlStatus clone(struct ChmlNode *out,const ChmlNodeDef *src,unsigned dep
         out->attr_count=src->attribute_count;
         for(size_t i=0;i<out->attr_count;i++) {
             const ChmlAttrDef *a=&src->attributes[i];
-            if(!valid_name(a->name)) return CHML_ERR_ARGUMENT;
-            switch(a->kind) {
-                case CHML_ATTR_STRING:
-                    if(!a->value) return CHML_ERR_ARGUMENT;
-                    break;
-                case CHML_ATTR_BOOLEAN:
-                    /* A boolean attribute has no value. Never reinterpret a
-                       string such as "false"; that distinction belongs to the
-                       author. ARIA attributes are never HTML booleans. */
-                    if(a->value) return CHML_ERR_ARGUMENT;
-                    if(is_aria(a->name)) return CHML_ERR_ARGUMENT;
-                    break;
-                default:
-                    return CHML_ERR_ARGUMENT;
-            }
+            if(chml_attr_validate(a)!=CHML_OK) return CHML_ERR_ARGUMENT;
             /* A duplicate attribute would be silently dropped by the HTML parser,
                which loses author data. Reject it instead of emitting it. */
             for(size_t j=0;j<i;j++)
@@ -191,7 +195,9 @@ static ChmlStatus clone(struct ChmlNode *out,const ChmlNodeDef *src,unsigned dep
         out->children=calloc(src->child_count,sizeof(*out->children));if(!out->children)return CHML_ERR_MEMORY;
         out->child_count=src->child_count;
         for(size_t i=0;i<out->child_count;i++) {
-            ChmlStatus st=clone(&out->children[i],&src->children[i],depth+1);
+            out->children[i]=calloc(1,sizeof(**out->children));
+            if(!out->children[i])return CHML_ERR_MEMORY;
+            ChmlStatus st=clone(out->children[i],&src->children[i],depth+1);
             if(st!=CHML_OK)return st;
         }
     }
@@ -263,7 +269,7 @@ static int charset_state(const struct ChmlNode *n) {
         }
     }
     for(size_t i=0;i<n->child_count;i++) {
-        int s=charset_state(&n->children[i]);
+        int s=charset_state(n->children[i]);
         if(s<0)return -1;
         if(s>0)state=1;
     }
@@ -271,12 +277,7 @@ static int charset_state(const struct ChmlNode *n) {
 }
 static int has_head_in(const struct ChmlNode *n) {
     if(n->tag && ascii_ci_equal(n->tag,"head"))return 1;
-    for(size_t i=0;i<n->child_count;i++)if(has_head_in(&n->children[i]))return 1;
-    return 0;
-}
-static int has_head(const struct ChmlDocument *doc) {
-    for(size_t i=0;i<doc->root_count;i++)
-        if(has_head_in(&doc->roots[i]))return 1;
+    for(size_t i=0;i<n->child_count;i++)if(has_head_in(n->children[i]))return 1;
     return 0;
 }
 
@@ -310,28 +311,41 @@ static int emit(FILE *f,const struct ChmlNode *n,int *inject_charset,int raw_tex
         }
     }
     for(size_t i=0;i<n->child_count;i++)
-        if(!emit(f,&n->children[i],inject_charset,kind==CHML_TEXT_RAW))return 0;
+        if(!emit(f,n->children[i],inject_charset,kind==CHML_TEXT_RAW))return 0;
     return fprintf(f,"</%s>",n->tag)>=0;
 }
-typedef struct { const ChmlDocument *doc; int inject; } DocumentOutput;
-static int write_document(FILE *f,const void *ctx) {
-    const DocumentOutput *out=(const DocumentOutput *)ctx;
-    int inject=out->inject;
+typedef struct { struct ChmlNode *const *roots; size_t count; } NodeList;
+static int write_node_list(FILE *f,const void *ctx) {
+    const NodeList *l=(const NodeList *)ctx;
+    int inject=0;
+    for(size_t i=0;i<l->count;i++) if(has_head_in(l->roots[i])) {inject=1;break;}
+    int declared=0;
+    for(size_t i=0;i<l->count;i++) if(charset_state(l->roots[i])>0) declared=1;
+    if(declared) inject=0;
+
     if(fputs("<!doctype html>\n",f)==EOF)return 0;
-    for(size_t i=0;i<out->doc->root_count;i++)
-        if(!emit(f,&out->doc->roots[i],&inject,0))return 0;
+    for(size_t i=0;i<l->count;i++)
+        if(!emit(f,l->roots[i],&inject,0))return 0;
     return fputc('\n',f)!=EOF;
+}
+ChmlStatus chml_write_node_list(struct ChmlNode *const *roots,size_t count,const char *path) {
+    if(!path||(count&&!roots))return CHML_ERR_ARGUMENT;
+    /* Charset conflicts must be rejected before the destination is opened. */
+    for(size_t i=0;i<count;i++)
+        if(charset_state(roots[i])<0)return CHML_ERR_ARGUMENT;
+    NodeList list={roots,count};
+    return chml_write_file_atomic(path,write_node_list,&list);
 }
 ChmlStatus chml_document_write(const ChmlDocument *doc,const char *path) {
     if(!doc||!path)return CHML_ERR_ARGUMENT;
-    int declared=0;
-    for(size_t i=0;i<doc->root_count;i++) {
-        int s=charset_state(&doc->roots[i]);
-        if(s<0)return CHML_ERR_ARGUMENT;
-        if(s>0)declared=1;
-    }
-    DocumentOutput out={doc,!declared && has_head(doc)};
-    return chml_write_file_atomic(path,write_document,&out);
+    size_t n=doc->root_count;
+    if(n==0)return chml_write_node_list(NULL,0,path);
+    struct ChmlNode **ptrs=malloc(n*sizeof *ptrs);
+    if(!ptrs)return CHML_ERR_MEMORY;
+    for(size_t i=0;i<n;i++)ptrs[i]=&doc->roots[i];
+    ChmlStatus st=chml_write_node_list((struct ChmlNode *const *)ptrs,n,path);
+    free(ptrs);
+    return st;
 }
 void chml_document_destroy(ChmlDocument *doc) {
     if(!doc)return;

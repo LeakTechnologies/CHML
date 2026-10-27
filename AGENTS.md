@@ -26,10 +26,11 @@ M0.3 baseline with M0.4-A, M0.4-B and M0.4-C evaluated/complete; **M0.4-D is par
 
 ## Next unit of work
 
-1. **Decide ADR-0004** — this is the only thing blocking M0.5. Evaluation is complete: four candidates measured, D (transactional builder over an arena) recommended, negative controls recorded. The experimental code is kept outside this repository. Do not implement the builder API until the ADR is reviewed.
-2. **Allocation-failure injection** for the production materialization and write paths (carried over from ADR-0003).
-3. Design an extensible CSS grammar and at-rule model; don't keep extending ad-hoc character rejection.
-4. Port a licensed reference page; measure semantic, accessibility, visual, and payload parity across browsers.
+1. **Review ADR-0005 and settle the transaction API.** The builder is implemented and tested but experimental. Open questions are listed in the ADR; do not treat the API as final.
+2. **Leak Technologies reference port** — only after the component architecture passes review. The deployed site at `https://leaktechnologies.dev` is the reference; its editable source has not been located. Preserve the homepage's two-variant rotating LEAK composition; do not replace it with a conventional hero.
+3. **Allocation-failure injection** for the declarative materialization path.
+4. Design an extensible CSS grammar and at-rule model.
+5. Repository-history review follow-up: one commit message still contains a local absolute path (not sensitive); rewriting history is not authorized.
 
 M0.4 is complete. The Linux gate runs automatically on every push to `master`.
 

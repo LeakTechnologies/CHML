@@ -28,10 +28,18 @@ M0.4 incremental evidence:
   control discriminates for the expected reason. Runs `40548472675` and
   `40548731375` on Ubuntu 24.04.5, GCC 13.3.0, Clang 18.1.3.
 
-M0.4 is complete. Remaining, not part of M0.4:
+- M0.5-A: transactional component builder implemented and tested. Detached
+  session construction, attach with ownership transfer, discard, rollback.
+  Three reference components. Evidence: 7/7 tests, 15 allocation-failure points,
+  byte-identical parity with the declarative path, rollback negative control.
+  **API not final** — ADR-0005 remains Proposed pending review.
 
-- ADR-0004 decision, and only then component implementation.
-- Allocation-failure injection in the production materialization and write paths.
-- CSS parsing remains M0.5.
+M0.4 is complete. Remaining:
+
+- Review ADR-0005 and settle the transaction API before any further component work.
+- Allocation-failure injection in the declarative materialization path.
+- CSS parsing remains M0.5/M0.6 scope.
+- Leak Technologies reference-site port, after the component architecture passes
+  review.
 
 See `docs/compatibility-matrix.md` for per-feature status.

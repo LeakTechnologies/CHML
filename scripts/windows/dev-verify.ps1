@@ -146,12 +146,12 @@ if (Test-Path $Hello) {
 
 Section 'static analysis'
 $anaOk = $true
-foreach ($src in @('src\document.c', 'src\style.c', 'src\chml_io.c')) {
+foreach ($src in @('src\document.c', 'src\style.c', 'src\chml_io.c', 'src\builder.c')) {
     $obj = Join-Path $env:TEMP 'chml-an.o'
     & gcc -std=c11 -fanalyzer -Wall -Wextra -Wpedantic -I (Join-Path $RepoRoot 'include') -I (Join-Path $RepoRoot 'src') -c (Join-Path $RepoRoot $src) -o $obj *> (Join-Path $LogDir ("analyzer-" + (Split-Path $src -Leaf) + '.log'))
     if ($LASTEXITCODE -ne 0) { $anaOk = $false }
 }
-if ($anaOk) { Record 'gcc -fanalyzer' PASS 'document.c, style.c, chml_io.c' }
+if ($anaOk) { Record 'gcc -fanalyzer' PASS 'document.c, style.c, chml_io.c, builder.c' }
 else { Record 'gcc -fanalyzer' FAIL "see $LogDir" }
 
 Section 'sanitizers'

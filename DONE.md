@@ -1,5 +1,44 @@
 # CHML done log
 
+## 2026-10-27 — M0.5-A transactional component builder
+
+Done:
+
+- Detached session construction with explicit attachment and ownership transfer.
+- Marks and rollback for per-component failure inside a session.
+- Shared node representation: the builder and the declarative path produce the
+  same tree and are serialized by the same code. `chml_write_node_list` is the
+  single write path.
+- Three reference components (`PageLayout`, `Navigation`, `Card`) and a site
+  example producing `index.html` + `style.css`.
+- ADR-0004 accepted for its principles; ADR-0005 proposed for the transaction
+  model.
+
+Evidence (Windows, GCC 15.2.0, strict flags):
+
+```
+ctest --test-dir build-gcc --output-on-failure
+  100% tests passed, 7 tests
+```
+
+- Byte-identical output between builder and declarative paths for the same
+  markup, including escaping and boolean attributes.
+- 15 allocation-failure points injected; every failure returned the builder to
+  its pre-component byte count.
+- Discard reclaims the session and leaves the committed document unchanged.
+- Rollback reclaims memory and removes the partial subtree.
+- Foreign handles rejected; a detached node cannot receive a committed subtree.
+
+Negative control: `chml_builder_rollback` replaced by a no-op fails three checks
+(memory reclamation, rolled-back subtree absent, orphan removal), so the tests
+distinguish rollback from inaction.
+
+Defects found: rollback omitted `child_cap` (NULL-array write on the next
+append), and `begin` could leak a block when it failed after allocating its root.
+
+Not done: the API is not final; ADR-0005 is Proposed. No JavaScript, CSS or
+website work in this increment.
+
 ## 2026-10-27 — M0.4-D4 Linux verification executed (M0.4-D satisfied)
 
 The account's Actions billing restriction was not lifted. Instead the repository

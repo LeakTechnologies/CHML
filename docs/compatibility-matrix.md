@@ -44,7 +44,11 @@ about browser conformance.** No row here is backed by browser-level testing.
 | Full attribute-name conformance | Partial | `[A-Za-z][A-Za-z0-9:_-]*` only |
 | Document structure constraints (one `html`, head/body order) | Absent | Author's responsibility |
 | Encoding window (declaration within first 1024 bytes) | Deferred | Not enforced |
-| Reusable components as C functions | Proposed | Evaluated in ADR-0004; **not implemented**. The declarative macros are single-function-scoped |
+| Reusable components as C functions | Experimental | `include/chml/builder.h`; ADR-0004 Accepted for principles, ADR-0005 Proposed for the transaction API |
+| Detached construction + attach | Tested | `chml_builder_begin` / `attach`; ownership transfer by region splice |
+| Builder rollback | Tested | mark/rollback; negative control fails 3 checks |
+| Builder allocation-failure injection | Tested | 15 points, byte count returns to baseline |
+| Builder vs declarative parity | Tested | byte-identical output for the same markup |
 
 ## CSS
 
