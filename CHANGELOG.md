@@ -1,5 +1,43 @@
 # CHML changelog
 
+## Unreleased — verification hygiene: final-newline check
+
+### Added
+
+- **`scripts/check-final-newline.sh`** (POSIX) and
+  **`scripts/check-final-newline.ps1`** (Windows): every tracked `.c`, `.h`,
+  `.md` and `.sh` file must end with a line feed. One rule covers both
+  conventions — an LF file ends with 0x0A and a CRLF file also ends with 0x0A —
+  while a file ending in a bare CR, a space or any other byte is a violation.
+  Empty files are accepted; a file that cannot be read is a failure, not a pass.
+- The inventory comes from `git ls-files -z`, never a filesystem walk, so build
+  output and untracked files cannot influence the result. Paths are read
+  NUL-separated, so names containing spaces, quotes or non-ASCII bytes are
+  handled verbatim.
+- Both scripts have a `controls` mode that builds a fixture tree in a temporary
+  directory and asserts the verdicts: LF, CRLF and empty accepted; a foreign
+  extension ignored; missing LF, bare CR, and names containing a space or a
+  quote refused. The negative control fails the check on purpose, so the check
+  is shown to discriminate rather than merely to return zero. Both hosts print
+  the same case identifiers and the two outputs are compared line by line.
+- Both host gates now run the check and its controls as their own
+  `repository hygiene` section, before the build. A failure is a gate failure;
+  the current build, test and sanitizer requirements are unchanged.
+
+### Why
+
+Run `40595446406` of the Linux gate failed on Clang's `-Wnewline-eof`, a warning
+GCC does not enable. That class of defect is invisible to the Windows build, and
+invisible to every build once the file is Markdown. It is now checked directly
+and deterministically on both host families.
+
+### Limits
+
+- `.ps1`, `.yml` and other extensions are out of scope; extending the check is a
+  one-line change in each script (the extension lists must be kept in step).
+- This is a hygiene check on file endings. It says nothing about content
+  correctness, encoding validity or trailing whitespace.
+
 ## Unreleased — M0-S2b: context-sensitive URL policy (security)
 
 ### Added
