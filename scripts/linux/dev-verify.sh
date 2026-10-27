@@ -80,7 +80,7 @@ configure_build_test() {
         return 1
     fi
 
-    if ! cmake --build "$dir" --parallel >"$bld" 2>&1; then
+    if ! cmake --build "$dir" --parallel --verbose >"$bld" 2>&1; then
         record "$label build" FAIL "see ${bld}"
         return 1
     fi
@@ -154,22 +154,51 @@ sanitizer_supported() { # <compiler> <sanitizer>
         "$1" -x c -fsanitize="$2" -o /dev/null - >/dev/null 2>&1
 }
 
+# A sanitizer build that silently dropped its flag would still compile and still
+# pass its tests. Prove instrumentation instead of inferring it: the flag must
+# appear in the compiler command, and the runtime must be visible in the binary.
+assert_sanitizer_instrumentation() { # <label> <build dir> <flag> <lib pattern> <symbol pattern>
+    local label="$1" dir="$2" flag="$3" lib="$4" sym="$5"
+    local bin="${dir}/chml_document_test"
+
+    if ! grep -q -- "$flag" "${LOG_DIR}/${label}.build.log"; then
+        record "${label} instrumentation" FAIL "compiler command does not contain ${flag}"
+        return 1
+    fi
+    if ldd "$bin" 2>/dev/null | grep -qi "$lib"; then
+        record "${label} instrumentation" PASS "flag applied; runtime ${lib} linked"
+        return 0
+    fi
+    if nm -C "$bin" 2>/dev/null | grep -q "$sym"; then
+        record "${label} instrumentation" PASS "flag applied; ${sym} present (static runtime)"
+        return 0
+    fi
+    record "${label} instrumentation" FAIL "flag applied but ${bin} shows no runtime"
+    return 1
+}
+
 section "AddressSanitizer"
 if sanitizer_supported clang address; then
     # Leak detection stays on. Some allocators and container runtimes interfere
     # with ASan; that limitation is documented rather than silently disabled.
-    configure_build_test "asan" clang \
+    if configure_build_test "asan" clang \
         "-fsanitize=address -fno-omit-frame-pointer -g" \
-        "env ASAN_OPTIONS=detect_leaks=1:abort_on_error=1"
+        "env ASAN_OPTIONS=detect_leaks=1:abort_on_error=1"; then
+        assert_sanitizer_instrumentation "asan" "${BUILD_ROOT}/asan" \
+            "-fsanitize=address" "libasan" "__asan_"
+    fi
 else
     record "asan supported" FAIL "clang cannot link -fsanitize=address"
 fi
 
 section "UndefinedBehaviorSanitizer"
 if sanitizer_supported clang undefined; then
-    configure_build_test "ubsan" clang \
+    if configure_build_test "ubsan" clang \
         "-fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g" \
-        "env UBSAN_OPTIONS=print_stacktrace=1"
+        "env UBSAN_OPTIONS=print_stacktrace=1"; then
+        assert_sanitizer_instrumentation "ubsan" "${BUILD_ROOT}/ubsan" \
+            "-fsanitize=undefined" "libubsan" "__ubsan_"
+    fi
 else
     record "ubsan supported" FAIL "clang cannot link -fsanitize=undefined"
 fi
