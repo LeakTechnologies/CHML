@@ -164,7 +164,7 @@ static void test_rollback(void) {
 
 /* ---- 5. deterministic allocation failure at every point ---- */
 static void test_failure_injection(void) {
-    int points = 0, clean = 0, last = 0;
+    int points = 0, clean = 0, last = 0, atomic_ok = 0;
     for (int n = 1; n <= 40; n++) {
         FailCtx ctx = { 0, 0 };
         ChmlBuilder *b = chml_builder_create();
@@ -199,6 +199,21 @@ static void test_failure_injection(void) {
             size_t after = chml_builder_test_bytes(b);
             if (after == baseline) clean++;
 
+            /* Attachment atomicity: a failure anywhere in the attach path must
+               leave the committed document byte-identical. All validation and
+               allocation happen before the ownership splice; this asserts it. */
+            if (chml_builder_write(b, "fi_doc.html") != CHML_OK) {
+                printf("       n=%d: write after failed attach failed\n", n);
+            } else {
+                char *doc = read_all("fi_doc.html");
+                const char *want = "<!doctype html>\n<main><p>committed</p></main>\n";
+                if (!doc || strcmp(doc, want) != 0) {
+                    printf("       n=%d: document changed after failed attach\n", n);
+                } else atomic_ok++;
+                free(doc);
+                remove("fi_doc.html");
+            }
+
         } else {
             chml_builder_destroy(b);
             break;                        /* n exceeded the card's allocation count */
@@ -207,6 +222,7 @@ static void test_failure_injection(void) {
     }
     check(points >= 5, "allocation failure injected at several distinct points");
     check(clean == points, "every failed construction rolls back to the baseline");
+    check(atomic_ok == points, "failed attachment leaves the document byte-identical");
     printf("       (%d failure points, last at allocation %d)\n", points, last);
 }
 

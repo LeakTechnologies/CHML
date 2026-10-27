@@ -79,6 +79,68 @@ building M0.5-A.
    not attempted; using one is undefined.
 7. **Thread safety.** Single-threaded by assumption.
 
+## API review (M0.5-A verification, 2026-10-27)
+
+### Detached handle lifetime and stale handles
+
+A handle from a discarded session is invalid. The API prohibits its use, and
+**it is not detected**: the pointer may point into reclaimed or reused heap, so
+dereferencing it is undefined behaviour. What the builder *does* reject is a
+pointer that belongs to no live region of this builder — a foreign handle, or a
+handle from another builder — because that check is a range scan over live
+blocks and never dereferences the candidate.
+
+Consequence: `CHML_ERR_ARGUMENT` on a foreign handle is a real guarantee.
+"Safe rejection of arbitrary stale pointers" is **not** a guarantee and must not
+be claimed. A future revision could carry a generation tag in the handle to make
+this detectable; that is out of scope for M0.5-A.
+
+### Attachment atomicity
+
+Ordering inside `chml_builder_attach`:
+
+1. validate `root` against the session root;
+2. resolve and validate `parent` (document-owned only);
+3. append the root to the parent's child list or the document root list — the
+   only fallible step, because it may grow an array;
+4. splice the session blocks into the document region — pointer work only;
+5. close the session.
+
+Every validation and allocation precedes the commit point, so a failure returns
+before step 4 and the document is untouched. This is now asserted directly: at
+each of the 15 injected failure points the committed document is re-serialized
+and compared byte-for-byte with its pre-component form.
+
+### Memory reclamation
+
+Rollback and discard both return the builder's block accounting to its
+pre-component value, and CI runs the same test under ASan (leak detection on)
+and UBSan. Caveat: the byte counter measures **block** allocations, not
+individual node allocations, so it is a coarse instrument; the sanitizer run is
+the stronger evidence.
+
+### Session lifetime
+
+The single-session restriction is retained. Nested components share the open
+session, which is what makes composition work; multiple concurrent sessions would
+add a stack discipline with no demonstrated need.
+
+### Attribute mutation after attachment
+
+Not supported. Attributes must be set inside the session, before attach. Adding
+mutability later would need to preserve the "committed nodes never move"
+guarantee while allowing attribute arrays to grow — likely a per-node heap
+attribute list rather than a region array.
+
+### Authoring ergonomics observed
+
+- The component functions read well: `project_card_add(b, main, "CHML", "…", "#c")`.
+- The failure path is the weak point: every component must remember to roll back,
+  and every caller to discard. This is the open question, not the construction
+  syntax.
+- `chml_builder_mark` taking a parent couples the checkpoint to a specific node;
+  a parameterless mark would be simpler but cannot restore the child list.
+
 ## Evidence
 
 `tests/builder_test.c` — exact serialization, byte-identical parity with the
