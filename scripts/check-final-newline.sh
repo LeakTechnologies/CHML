@@ -179,7 +179,10 @@ run_controls() {
     printf 'no newline' >"$fail/sub/missing.h"
     printf 'no newline' >"$fail/ignore.txt"
 
-    out=$("$SELF" dir "$pass" 2>&1)
+    # Invoked through bash explicitly: the executable bit is not reliable across
+    # checkouts (a Windows checkout stores no mode), and this same script is
+    # run by the Linux gate as `bash check-final-newline.sh`.
+    out=$(bash "$SELF" dir "$pass" 2>&1)
     rc=$?
     if [ "$rc" -eq 0 ]; then
         control_ok "accept-lf+crlf+empty: positive fixture passes"
@@ -195,7 +198,7 @@ run_controls() {
         *) control_bad "accept-empty: $out" ;;
     esac
 
-    out=$("$SELF" dir "$fail" 2>&1)
+    out=$(bash "$SELF" dir "$fail" 2>&1)
     rc=$?
     if [ "$rc" -eq 1 ]; then
         control_ok "reject-missing-lf: nonzero exit status"
