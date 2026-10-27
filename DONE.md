@@ -1,5 +1,41 @@
 # CHML done log
 
+## 2026-10-27 — M0.4-C component architecture evaluation
+
+Done:
+
+- Four isolated prototypes built and measured outside the repository:
+  A arena + append-into-parent, B caller-provided fixed storage,
+  C two-pass measure-then-emit, D transactional builder over an arena.
+- Identical scenario across all four: two function boundaries, nesting, growth
+  after handle return, allocation/capacity failure injection at every point
+  inside the component, and byte-for-byte output comparison.
+- Negative controls: reallocating contiguous array invalidates a handle; D with
+  the rollback removed degrades to A and fails the harness.
+- Compatibility check: an existing `ChmlNodeDef` driven through the builder
+  reproduces the shipped writer's output exactly.
+- ADR-0004 rewritten with results, the handle-stability definition, a
+  recommended architecture and eight unresolved questions.
+
+Verification commands (from `E:\Development\chml-m04c-experiments`):
+
+```
+gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion -Wstrict-prototypes common.c cand_a.c cand_b.c cand_c.c cand_d.c harness.c -o harness.exe
+gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion -Wstrict-prototypes neg_realloc.c -o neg_realloc.exe
+gcc -std=c11 -w common.c cand_a.c cand_b.c cand_c.c cand_d_norollback.c harness.c -o neg_rollback.exe
+gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion -Wstrict-prototypes -I <repo>/include -I <repo>/src compat_check.c common.c cand_d.c <repo>/src/document.c <repo>/src/chml_io.c -o compat_check.exe
+```
+
+Results: harness checks passed; negative controls reproduced their defects;
+compatibility check passed. Production suite unchanged at 4/4.
+
+Not done (deliberately): the builder API is **not** implemented in the
+production repository. ADR-0004 remains Proposed pending review.
+
+Remaining limitations recorded in the ADR: builder prototypes do not model
+attributes; rollback ergonomics in C are unresolved; arena failure granularity
+and block sizing are undecided.
+
 ## 2026-10-27 — M0.4-B atomic output
 
 Done:

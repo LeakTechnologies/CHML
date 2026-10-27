@@ -19,12 +19,17 @@ M0.4 incremental evidence:
 - M0.4-B: atomic output for both writers, temporary cleanup on failure,
   artifact-preserving replacement, write-failure fixtures. Evidence: 4/4 tests,
   8 atomic-write checks, both controls reproduced the original defect.
+- M0.4-C: component architecture **evaluated, not decided.** Four candidates
+  measured outside the repository; D (transactional builder over an arena)
+  recommended; ADR-0004 revised and still Proposed. No production code changed.
 
 Still **open** in M0.4:
 
-- M0.4-C component architecture review (ADR-0004 not implemented).
-- M0.4-D Linux sanitizer runner, Clang strict build, browser-level checks.
-- Allocation-failure injection.
+- ADR-0004 decision and, only after it, implementation.
+- M0.4-D, mandatory gate: Linux POSIX atomic-write execution, strict GCC and
+  Clang builds, sanitizers, allocation-failure injection. **M0.4 is not closed
+  until M0.4-D passes.**
+- Allocation-failure injection in the production materialization and write paths.
 - CSS parsing remains M0.5.
 
 See `docs/compatibility-matrix.md` for per-feature status.

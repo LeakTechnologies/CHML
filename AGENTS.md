@@ -14,6 +14,7 @@ Read `README.md`, `docs/architecture.md`, `docs/compatibility-matrix.md`, `docs/
 - Declarative-first authoring over a small procedural core. Keep explicit ownership and error contracts.
 - HTML/CSS/JS may be generated browser artifacts; do not require handwritten HTML/CSS/JS for CHML apps.
 - Never claim full HTML/CSS compatibility, security, browser parity, or performance superiority without evidence.
+- An architecture proposal must show both its successful behaviour and at least one **failure mode that distinguishes it from the alternatives**. A test that would also pass on the rejected design is not evidence.
 - Preserve the web platform's semantics, CSS cascade, accessibility, and standard-browser operation.
 - Keep third-party dependencies minimal and document official/version-specific references for adopted tools.
 - Never delete or replace existing work without inspection; commit coherent tested units and report exact verification commands.
@@ -21,16 +22,13 @@ Read `README.md`, `docs/architecture.md`, `docs/compatibility-matrix.md`, `docs/
 
 ## Current state
 
-M0.3 baseline with M0.4-A and M0.4-B complete. Void-element content and duplicate attributes are rejected case-insensitively at materialization; text is serialized by context (ordinary / RCDATA / raw text) with raw-text end-tag hazards rejected; attributes are semantically typed (string vs boolean); `<meta charset="utf-8">` is injected into an existing `<head>` and conflicting declarations are rejected; both writers are atomic (temporary file plus replace). Stylesheet output remains a deliberately restricted CSS subset. This is not production-ready. Static example emits HTML and CSS, no client JS. The declarative macros are safe only within a single function body (ADR-0004). See `docs/compatibility-matrix.md` for per-feature status and open questions.
+M0.3 baseline with M0.4-A and M0.4-B complete; M0.4-C evaluated but **not decided**. Void-element content and duplicate attributes are rejected case-insensitively at materialization; text is serialized by context (ordinary / RCDATA / raw text) with raw-text end-tag hazards rejected; attributes are semantically typed (string vs boolean); `<meta charset="utf-8">` is injected into an existing `<head>` and conflicting declarations are rejected; both writers are atomic (temporary file plus replace). Stylesheet output remains a deliberately restricted CSS subset. This is not production-ready. Static example emits HTML and CSS, no client JS. The declarative macros are safe only within a single function body. See `docs/decisions/ADR-0004-components-as-c-functions.md` for the evaluated component designs, `docs/compatibility-matrix.md` for per-feature status and open questions.
 
 ## Next unit of work
 
-1. **M0.4-C component architecture:** review ADR-0004, compare lifetime-safe builder designs, prototype nested components. This is a design gate: do not implement a public builder API without a decision.
-2. **M0.4-D verification:** Linux sanitizer runner and strict Clang build; Clang is not installed and ASan/UBSan runtimes are absent on the current Windows/MinGW host. This also unblocks the POSIX atomic-write branch, which has never been executed.
-3. **Allocation-failure injection** for the materialization and write paths.
-4. Design an extensible CSS grammar and at-rule model; don't keep extending ad-hoc character rejection.
-5. Port a licensed reference page; measure semantic, accessibility, visual, and payload parity across browsers.
-
-Reviewed proposals awaiting a decision: ADR-0004 (build-into-document component API).
+1. **Decide ADR-0004.** Evaluation is complete: four candidates measured, D (transactional builder over an arena) recommended, negative controls recorded. The experimental code is in `E:\Development\chml-m04c-experiments`, outside this repository. Do not implement the builder API until this ADR is reviewed.
+2. **M0.4-D, mandatory gate:** Linux POSIX execution of the atomic writer, strict GCC and Clang builds, sanitizers, and outstanding allocation-failure injection. M0.4 is **not closed** until this passes.
+3. Design an extensible CSS grammar and at-rule model; don't keep extending ad-hoc character rejection.
+4. Port a licensed reference page; measure semantic, accessibility, visual, and payload parity across browsers.
 
 For each unit, provide changed files, tests, known limitations, and evidence. Do not mark proposed ADRs accepted without review.

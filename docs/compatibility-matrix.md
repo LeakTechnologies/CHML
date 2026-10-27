@@ -44,6 +44,7 @@ about browser conformance.** No row here is backed by browser-level testing.
 | Full attribute-name conformance | Partial | `[A-Za-z][A-Za-z0-9:_-]*` only |
 | Document structure constraints (one `html`, head/body order) | Absent | Author's responsibility |
 | Encoding window (declaration within first 1024 bytes) | Deferred | Not enforced |
+| Reusable components as C functions | Proposed | Evaluated in ADR-0004; **not implemented**. The declarative macros are single-function-scoped |
 
 ## CSS
 

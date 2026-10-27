@@ -3,6 +3,34 @@
 Behaviour-affecting changes, newest first. Test counts are for `ctest` on the
 suite as configured in `CMakeLists.txt`.
 
+## Unreleased — M0.4-C component architecture evaluation (2026-10-27)
+
+**No production code changed in this increment.** `include/`, `src/`, `tests/`
+and `CMakeLists.txt` are untouched; the test suite is unchanged at 4/4.
+
+### Changed (documentation)
+
+- `docs/decisions/ADR-0004` rewritten with the four-candidate evaluation:
+  measured results, negative controls, the handle-stability definition, a
+  recommended architecture (D, transactional builder over an arena), and eight
+  unresolved questions. Status remains **Proposed**.
+- `AGENTS.md` gained a governance rule: an architecture proposal must show a
+  failure mode that distinguishes it from the alternatives.
+
+### Evidence
+
+- Experimental code, outside the repository: `E:\Development\chml-m04c-experiments`
+  (`README.md` holds the exact build/run commands and recorded results).
+- All four candidates emit byte-identical HTML (240 bytes).
+- Transactional D rolled back cleanly at all 5 injected allocation failures;
+  non-transactional A left a partial card attached in 4 of 5.
+- A `realloc`-grown array moved its base and invalidated a previously returned
+  handle (negative control), which is why that design is excluded.
+- Removing D's rollback call degrades it to A's behaviour and fails the harness,
+  so the rollback check is discriminating.
+- A real `ChmlNodeDef` driven through the builder reproduces the shipped
+  writer's output byte-for-byte.
+
 ## Unreleased — M0.4-B atomic output (2026-10-27)
 
 ### Added
