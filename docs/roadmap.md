@@ -8,7 +8,20 @@
 
 No milestone implies full HTML/CSS conformance until conformance tests establish it.
 
-M0.4 incremental evidence: added document negative tests, early rejection of void
-elements with content (now ASCII case-insensitive), and rejection of duplicate
-attributes. Sanitizers, raw-text elements, boolean attributes, encoding
-declaration, atomic output, and CSS parsing remain **open**.
+M0.4 incremental evidence:
+
+- Increment 2: document negative tests, case-insensitive void-element rejection,
+  duplicate-attribute rejection.
+- M0.4-A: context-aware text serialization (ordinary / RCDATA / raw text),
+  raw-text end-tag hazard rejection, semantic boolean attributes, UTF-8
+  declaration policy, hostile/corrupt input fixtures, negative controls.
+  Evidence: 3/3 tests, 32 serialization fixtures, `-fanalyzer` clean.
+
+Still **open** in M0.4:
+
+- M0.4-B atomic output and write-failure cleanup.
+- M0.4-C component architecture review (ADR-0004 not implemented).
+- M0.4-D Linux sanitizer runner, Clang strict build, browser-level checks.
+- CSS parsing remains M0.5.
+
+See `docs/compatibility-matrix.md` for per-feature status.

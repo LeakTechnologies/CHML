@@ -19,3 +19,16 @@ Reject invalid element names and void elements with children or text during mate
 ## Evidence required for acceptance
 
 Fault-injection tests, sanitizer builds, HTML parsing fixtures, and cross-browser conformance tests. Until then this ADR remains proposed.
+
+## Progress (2026-10-27, M0.4-A)
+
+Addressed since this ADR was written: void-element children for any ASCII case
+variant, duplicate attribute names, raw-text elements (`script`, `style`, `xmp`,
+`iframe`, `noembed`, `noframes`) including rejection of end-tag hazards, RCDATA
+elements (`title`, `textarea`), semantic boolean attributes, and an explicit
+UTF-8 declaration policy. `<plaintext>` is rejected as unserializable.
+
+Still open, unchanged by that work: allocation-failure injection and fuzzing,
+comment nodes, namespaces/foreign content, doctype control, document-level
+structural constraints, input size, embedded NUL and Unicode validation, atomic
+output, and the CSS restriction listed above. The ADR stays proposed.

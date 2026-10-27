@@ -6,7 +6,7 @@ CHML is a deliberately absurd but technically serious **ISO C-authored web platf
 
 ## Start here
 
-Read `README.md`, `docs/architecture.md`, `docs/roadmap.md`, `docs/references.md`, and all ADRs before making changes. Inspect the actual code and run the test suite. Treat proposed architecture as provisional; tests are not certification.
+Read `README.md`, `docs/architecture.md`, `docs/compatibility-matrix.md`, `docs/roadmap.md`, `docs/references.md`, and all ADRs before making changes. Inspect the actual code and run the test suite. Treat proposed architecture as provisional; tests are not certification.
 
 ## Non-negotiable rules
 
@@ -21,14 +21,15 @@ Read `README.md`, `docs/architecture.md`, `docs/roadmap.md`, `docs/references.md
 
 ## Current state
 
-M0.3 baseline with partial M0.4 hardening. The document tree deep-copies definitions; void-element content and duplicate attributes are rejected case-insensitively at materialization. HTML escaping is basic, and the declarative macros are safe only within a single function body (ADR-0004). Stylesheet output supports a deliberately restricted CSS subset. This is not production-ready. Static example emits HTML and CSS, no client JS, and no encoding declaration. See `docs/decisions/ADR-0003-ownership-validation.md` and `ADR-0004` for unresolved risks.
+M0.3 baseline with M0.4-A complete: void-element content and duplicate attributes are rejected case-insensitively at materialization; text is serialized by context (ordinary / RCDATA / raw text) with raw-text end-tag hazards rejected; attributes are semantically typed (string vs boolean); `<meta charset="utf-8">` is injected into an existing `<head>` and conflicting declarations are rejected. Stylesheet output remains a deliberately restricted CSS subset. This is not production-ready. Static example emits HTML and CSS, no client JS. The declarative macros are safe only within a single function body (ADR-0004). See `docs/compatibility-matrix.md` for per-feature status and open questions.
 
 ## Next unit of work
 
-1. Add sanitizer/negative tests, fault injection, and robust output failure handling. Sanitizers are currently unavailable on the Windows/MinGW host; verify on Linux or install LLVM.
-2. Specify and implement HTML5 serialization semantics (a) raw-text elements so `script`/`style` content is not escaped, (b) boolean attributes, (c) an explicit character-encoding declaration, with independent fixtures.
-3. Design an extensible CSS grammar and at-rule model; don't keep extending ad-hoc character rejection.
-4. Port a licensed reference page; measure semantic, accessibility, visual, and payload parity across browsers.
+1. **M0.4-B atomic output:** write to a temporary file and rename, so an I/O failure cannot replace a valid artifact. Add write-failure and cleanup tests.
+2. **M0.4-D verification:** Linux sanitizer runner and strict Clang build; Clang is not installed and ASan/UBSan runtimes are absent on the current Windows/MinGW host.
+3. **M0.4-C component architecture:** review ADR-0004, compare lifetime-safe builder designs, prototype nested components. Not to be implemented without a decision.
+4. Design an extensible CSS grammar and at-rule model; don't keep extending ad-hoc character rejection.
+5. Port a licensed reference page; measure semantic, accessibility, visual, and payload parity across browsers.
 
 Reviewed proposals awaiting a decision: ADR-0004 (build-into-document component API).
 

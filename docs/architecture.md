@@ -10,11 +10,13 @@ Author complete, accessible web applications using standards-compliant C source;
 - **Backend:** standard HTML and CSS files. A future native C server and optional client-side interop are separate milestones.
 
 ## Known limitations
-- Element and attribute names are validated as ASCII case-insensitive: void elements are recognised in any case and duplicate attributes are rejected. Content models beyond void-element children, raw-text elements, foreign content, URL security, Unicode validity, and complete HTML parsing semantics are not yet supported or validated.
-- Raw-text elements (`script`, `style`) are serialized with HTML character references. Browsers do not decode character references there, so author-provided JavaScript or CSS content cannot currently be represented correctly.
-- The serializer has no character-encoding policy: output is raw bytes with no BOM and no `<meta charset>`, so browsers default `text/html` to windows-1252 and mangle non-ASCII text.
+- Element and attribute names are validated as ASCII case-insensitive: void elements are recognised in any case and duplicate attributes are rejected. Content models beyond void/raw-text/RCDATA children, foreign content, URL security, Unicode validity, and complete HTML parsing semantics are not yet supported or validated.
+- Text is serialized by context: ordinary and RCDATA (`title`, `textarea`) content is escaped, raw-text (`script`, `style`, `xmp`, `iframe`, `noembed`, `noframes`) content is emitted verbatim. Raw-text content containing a sequence that would close the element early is rejected at materialization rather than escaped or silently rewritten. `<plaintext>` is rejected outright. `noscript` is still treated as ordinary text and is deferred.
+- The serializer has a UTF-8 policy: `<meta charset="utf-8">` is injected as the first child of an existing `<head>`, an existing UTF-8 declaration suppresses injection, and a conflicting declaration is rejected before the destination is opened. Documents without a `<head>` are treated as fragments and receive no declaration.
 - The declarative `CHML_*` macros are only safe within one function body; their compound literals do not survive a return. See `docs/decisions/ADR-0004-components-as-c-functions.md`.
 - CSS support is a deliberately limited subset. Current validation rejects semicolons/braces/newlines, including valid CSS values that contain these characters; no general CSS tokenizer/parser exists. It does not establish full CSS compatibility.
+
+See `docs/compatibility-matrix.md` for the per-feature implemented/tested/unsupported/deferred status and the open specification questions.
 - CSS writer is not transactional: I/O errors can leave partial files. No allocation-failure injection tests yet.
 - Declarative macros require at least one child for `CHML_ELEMENT`; empty elements use `CHML_LEAF`.
 - Generated output has not undergone automated cross-browser, accessibility, or performance verification.

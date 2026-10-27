@@ -14,3 +14,7 @@ add_test(NAME chml_style_test COMMAND chml_style_test)
 add_executable(chml_document_test tests/document_test.c)
 target_link_libraries(chml_document_test PRIVATE chml)
 add_test(NAME chml_document_test COMMAND chml_document_test)
+
+add_executable(chml_serialization_test tests/serialization_test.c)
+target_link_libraries(chml_serialization_test PRIVATE chml)
+add_test(NAME chml_serialization_test COMMAND chml_serialization_test)

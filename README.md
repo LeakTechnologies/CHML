@@ -20,6 +20,7 @@ Open `output/index.html` in a browser. `output/style.css` is generated from C de
 ## Documentation
 
 - [Architecture and limitations](docs/architecture.md)
+- [Compatibility matrix](docs/compatibility-matrix.md)
 - [Milestone roadmap](docs/roadmap.md)
 - [Official references](docs/references.md)
 - [ADR-0001: C-first](docs/decisions/ADR-0001-c-first.md)
