@@ -60,6 +60,27 @@ echo "build dir: ${BUILD_ROOT}"
 
 mkdir -p "$LOG_DIR"
 
+# ------------------------------------------------------ repository hygiene ---
+# Cheap, deterministic and independent of the toolchain: a file that does not
+# end with LF is invisible to the compiler, so it is checked separately. This
+# runs before the build so a formatting defect fails fast and for one reason.
+
+section "repository hygiene"
+
+hyg="${LOG_DIR}/final-newline.log"
+if bash "${REPO_ROOT}/scripts/check-final-newline.sh" tracked "$REPO_ROOT" >"$hyg" 2>&1; then
+    checked=$(grep -o '[0-9]* checked' "$hyg" | head -1)
+    record "final newline (tracked files)" PASS "${checked:-tracked tree clean}"
+else
+    record "final newline (tracked files)" FAIL "see ${hyg}"
+fi
+
+if bash "${REPO_ROOT}/scripts/check-final-newline.sh" controls >"${LOG_DIR}/final-newline-controls.log" 2>&1; then
+    record "final newline controls" PASS "positive and negative fixtures discriminated"
+else
+    record "final newline controls" FAIL "see ${LOG_DIR}/final-newline-controls.log"
+fi
+
 # --------------------------------------------------------------- build/test ---
 
 # configure_build_test <label> <compiler> <extra flags> [ctest env prefix]

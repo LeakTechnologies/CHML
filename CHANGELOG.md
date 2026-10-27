@@ -1,5 +1,75 @@
 # CHML changelog
 
+## Unreleased — verification hygiene: final-newline check
+
+### Added
+
+- **`scripts/check-final-newline.sh`** (bash) and
+  **`scripts/check-final-newline.ps1`** (Windows): every tracked `.c`, `.h`,
+  `.md` and `.sh` file must end with a line feed. One rule covers both
+  conventions — an LF file ends with 0x0A and a CRLF file also ends with 0x0A —
+  while a file ending in a bare CR, a space or any other byte is a violation.
+  Empty files are accepted; a file that cannot be read is a failure, not a pass.
+  The `.sh` script is **bash**, not POSIX sh: it uses `BASH_SOURCE`, `read -d`,
+  parameter expansion and `local`, and both gates invoke it as `bash <script>`.
+- Both host gates run the check and its controls as their own
+  `repository hygiene` section, before the build. A failure is a gate failure;
+  the current build, test and sanitizer requirements are unchanged.
+
+### What is checked (contract)
+
+- Paths are enumerated from **Git's index** (`git ls-files -z`), never from a
+  filesystem walk, so build output and untracked files cannot influence the
+  result. Paths are NUL-separated: spaces, quotes and non-ASCII bytes survive.
+- The bytes read are the **working-tree files** at those paths. Committed blob
+  contents are not read directly. A violation introduced by an uncommitted edit
+  is therefore reported, and a clean checkout can differ from the last commit
+  only by line-ending conversion.
+- LF and CRLF both pass, because both end with byte `0x0A`; a bare CR does not.
+- A tracked file that is unreadable, or absent from the working tree, is a
+  verification failure (exit 2), never a pass. Exit 1 means "violations found",
+  exit 0 means "checked and clean".
+- **Filenames are decoded as UTF-8 on both hosts.** PowerShell 5.1 decodes
+  native stdout with the console code page, which corrupted UTF-8 path bytes and
+  made a tracked `café.md` look absent (exit 2 on a compliant file). The Windows
+  implementation now reads git's stdout as raw bytes and decodes UTF-8
+  explicitly, so no console state is read or written.
+
+### Controls
+
+Both scripts carry a `controls` mode; both print the same 19 case lines and the
+two outputs are compared programmatically:
+
+- Accepted: LF, CRLF, empty, and a compliant non-ASCII name.
+- Refused: missing LF, bare CR, and names containing a space, a quote or
+  non-ASCII bytes.
+- Ignored: an out-of-scope extension.
+- **Three-way tracked classification**, in a temporary Git repository: a
+  compliant tree exits 0, a missing final LF exits 1 and is reported, and a
+  tracked-but-absent file exits 2 and is classified as absent rather than clean.
+- **Mutation meta-controls**: two mutated copies of the checker (one that always
+  accepts, one that always rejects) must make these controls fail. This keeps
+  proving that the controls detect a broken checker rather than merely exercising
+  their own fixtures.
+
+### Why
+
+Run `40595446406` of the Linux gate failed on Clang's `-Wnewline-eof`, a warning
+GCC does not enable. That class of defect is invisible to the Windows build, and
+invisible to every build once the file is Markdown. It is now checked directly
+and deterministically on both host families.
+
+### Limits
+
+- `.ps1`, `.yml` and other extensions are out of scope; extending the check is a
+  one-line change in each script (the extension lists must be kept in step).
+- This is a hygiene check on file endings. It says nothing about content
+  correctness, encoding validity or trailing whitespace.
+- A non-ASCII filename is classified correctly on both hosts, but the name is
+  *rendered* through the console code page when output is redirected, so a log
+  may show a replacement character. The verdict, counts and exit status are
+  unaffected.
+
 ## Unreleased — M0-S2b: context-sensitive URL policy (security)
 
 ### Added

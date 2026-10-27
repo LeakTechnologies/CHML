@@ -65,6 +65,33 @@ if ($missing.Count -gt 0) {
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $GccBuild = Join-Path $BuildRoot 'gcc'
 
+Section 'repository hygiene'
+# Mirrors the Linux step. Run as a child process so its exit code is a real
+# process status rather than the result of an in-process script call.
+$Hygiene = Join-Path $RepoRoot 'scripts\check-final-newline.ps1'
+$hygLog = Join-Path $LogDir 'final-newline.log'
+$ctlLog = Join-Path $LogDir 'final-newline-controls.log'
+$psexe = (Get-Process -Id $PID).Path
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+& $psexe -NoProfile -ExecutionPolicy Bypass -File $Hygiene tracked $RepoRoot *> $hygLog
+$hygRc = $LASTEXITCODE
+& $psexe -NoProfile -ExecutionPolicy Bypass -File $Hygiene controls *> $ctlLog
+$ctlRc = $LASTEXITCODE
+$ErrorActionPreference = $prevEap
+if ($hygRc -eq 0) {
+    $line = (Select-String -Path $hygLog -Pattern 'checked' | Select-Object -Last 1)
+    $detail = if ($line) { ($line.Line -replace '^final newline \(tracked\):\s*', '').Trim() } else { 'tracked tree clean' }
+    Record 'final newline (tracked files)' PASS $detail
+} else {
+    Record 'final newline (tracked files)' FAIL "see $hygLog"
+}
+if ($ctlRc -eq 0) {
+    Record 'final newline controls' PASS 'positive and negative fixtures discriminated'
+} else {
+    Record 'final newline controls' FAIL "see $ctlLog"
+}
+
 Section 'GCC strict'
 Remove-Item -Recurse -Force $GccBuild -ErrorAction SilentlyContinue
 $cfg = Join-Path $LogDir 'gcc.configure.log'
