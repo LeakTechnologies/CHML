@@ -1,0 +1,8 @@
+# C sources are shared between GCC and Clang on multiple hosts; keep LF so
+# Windows checkouts do not introduce whole-file diffs.
+* text=auto eol=lf
+*.exe binary
+*.a binary
+*.o binary
+*.obj binary
+*.zip binary
