@@ -56,7 +56,11 @@ about browser conformance.** No row here is backed by browser-level testing.
 | General CSS tokenizer / grammar | Unsupported | Semicolons, braces, newlines in values are rejected even when valid CSS contains them |
 | Custom property *declaration* | Implemented | `--accent` works as a plain declaration |
 | Cascade, specificity, computed values | Not CHML's layer | Delegated to the browser; no claim |
-| Error recovery / partial stylesheet output | Unsupported | Validation happens before opening the file, but output is not atomic |
+| Error recovery / partial stylesheet output | Tested | Both writers use a temporary file plus replace; a failed write removes the temporary and leaves the existing artifact intact |
+| Atomic write: success path | Tested | `atomic_write_test` |
+| Atomic write: temp cleanup on failure | Tested | Coverage fixed at 8 candidate names |
+| Atomic write: existing artifact preserved | Tested | Read-only destination refuses replacement on Windows |
+| Atomic write: concurrency / multi-process safety | Deferred | No locking; last writer wins |
 
 ## Build and verification
 

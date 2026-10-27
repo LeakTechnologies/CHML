@@ -1,4 +1,5 @@
 #include "chml/chml.h"
+#include "chml_io.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -312,6 +313,15 @@ static int emit(FILE *f,const struct ChmlNode *n,int *inject_charset,int raw_tex
         if(!emit(f,&n->children[i],inject_charset,kind==CHML_TEXT_RAW))return 0;
     return fprintf(f,"</%s>",n->tag)>=0;
 }
+typedef struct { const ChmlDocument *doc; int inject; } DocumentOutput;
+static int write_document(FILE *f,const void *ctx) {
+    const DocumentOutput *out=(const DocumentOutput *)ctx;
+    int inject=out->inject;
+    if(fputs("<!doctype html>\n",f)==EOF)return 0;
+    for(size_t i=0;i<out->doc->root_count;i++)
+        if(!emit(f,&out->doc->roots[i],&inject,0))return 0;
+    return fputc('\n',f)!=EOF;
+}
 ChmlStatus chml_document_write(const ChmlDocument *doc,const char *path) {
     if(!doc||!path)return CHML_ERR_ARGUMENT;
     int declared=0;
@@ -320,13 +330,8 @@ ChmlStatus chml_document_write(const ChmlDocument *doc,const char *path) {
         if(s<0)return CHML_ERR_ARGUMENT;
         if(s>0)declared=1;
     }
-    int inject=!declared && has_head(doc);
-    FILE *f=fopen(path,"wb");if(!f)return CHML_ERR_IO;
-    int ok=fputs("<!doctype html>\n",f)!=EOF;
-    for(size_t i=0;ok&&i<doc->root_count;i++)ok=emit(f,&doc->roots[i],&inject,0);
-    if(ok)ok=fputc('\n',f)!=EOF;
-    if(fclose(f)!=0)ok=0;
-    return ok?CHML_OK:CHML_ERR_IO;
+    DocumentOutput out={doc,!declared && has_head(doc)};
+    return chml_write_file_atomic(path,write_document,&out);
 }
 void chml_document_destroy(ChmlDocument *doc) {
     if(!doc)return;

@@ -16,12 +16,15 @@ M0.4 incremental evidence:
   raw-text end-tag hazard rejection, semantic boolean attributes, UTF-8
   declaration policy, hostile/corrupt input fixtures, negative controls.
   Evidence: 3/3 tests, 32 serialization fixtures, `-fanalyzer` clean.
+- M0.4-B: atomic output for both writers, temporary cleanup on failure,
+  artifact-preserving replacement, write-failure fixtures. Evidence: 4/4 tests,
+  8 atomic-write checks, both controls reproduced the original defect.
 
 Still **open** in M0.4:
 
-- M0.4-B atomic output and write-failure cleanup.
 - M0.4-C component architecture review (ADR-0004 not implemented).
 - M0.4-D Linux sanitizer runner, Clang strict build, browser-level checks.
+- Allocation-failure injection.
 - CSS parsing remains M0.5.
 
 See `docs/compatibility-matrix.md` for per-feature status.

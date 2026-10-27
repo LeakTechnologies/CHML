@@ -17,7 +17,7 @@ Author complete, accessible web applications using standards-compliant C source;
 - CSS support is a deliberately limited subset. Current validation rejects semicolons/braces/newlines, including valid CSS values that contain these characters; no general CSS tokenizer/parser exists. It does not establish full CSS compatibility.
 
 See `docs/compatibility-matrix.md` for the per-feature implemented/tested/unsupported/deferred status and the open specification questions.
-- CSS writer is not transactional: I/O errors can leave partial files. No allocation-failure injection tests yet.
+- Both writers are atomic: content is written to a temporary file beside the destination and only replaces it after a complete, flushed, closed write. A failed write removes the temporary and leaves any existing artifact untouched. No allocation-failure injection tests yet.
 - Declarative macros require at least one child for `CHML_ELEMENT`; empty elements use `CHML_LEAF`.
 - Generated output has not undergone automated cross-browser, accessibility, or performance verification.
 

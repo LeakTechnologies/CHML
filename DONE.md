@@ -1,5 +1,39 @@
 # CHML done log
 
+## 2026-10-27 — M0.4-B atomic output
+
+Done:
+
+- Shared atomic writer (`src/chml_io.c`), used by both the document and stylesheet
+  writers.
+- Temporary file beside the destination, opened with C11 exclusive mode `"wbx"`,
+  replaced only after a complete, flushed, closed write.
+- Failure paths remove the temporary and leave any existing artifact untouched.
+- Platform replace: `MoveFileExA` on Windows (ISO C `rename()` cannot replace an
+  existing destination there), `rename()` elsewhere.
+
+Verification:
+
+```
+cmake -S . -B build-gcc -G "MinGW Makefiles" -DCMAKE_C_FLAGS="-std=c11 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion -Wstrict-prototypes"
+cmake --build build-gcc
+ctest --test-dir build-gcc --output-on-failure
+```
+
+Result: clean strict build, 4/4 tests pass, 8 atomic-write checks pass.
+
+Negative controls:
+
+- Direct in-place write instead of temp+replace: only the file-identity check
+  fails. Without that check the suite would have passed a non-atomic
+  implementation, which is why it was added.
+- Skipping temporary cleanup on a failed replace: both cleanup checks fail.
+
+Environment limitations:
+
+- The POSIX `rename()` branch was not executed; this host is Windows.
+- No mid-write fault injection; allocation-failure injection remains outstanding.
+
 ## 2026-10-27 — M0.4-A serialization correctness
 
 Done:

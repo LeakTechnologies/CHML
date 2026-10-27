@@ -21,13 +21,13 @@ Read `README.md`, `docs/architecture.md`, `docs/compatibility-matrix.md`, `docs/
 
 ## Current state
 
-M0.3 baseline with M0.4-A complete: void-element content and duplicate attributes are rejected case-insensitively at materialization; text is serialized by context (ordinary / RCDATA / raw text) with raw-text end-tag hazards rejected; attributes are semantically typed (string vs boolean); `<meta charset="utf-8">` is injected into an existing `<head>` and conflicting declarations are rejected. Stylesheet output remains a deliberately restricted CSS subset. This is not production-ready. Static example emits HTML and CSS, no client JS. The declarative macros are safe only within a single function body (ADR-0004). See `docs/compatibility-matrix.md` for per-feature status and open questions.
+M0.3 baseline with M0.4-A and M0.4-B complete. Void-element content and duplicate attributes are rejected case-insensitively at materialization; text is serialized by context (ordinary / RCDATA / raw text) with raw-text end-tag hazards rejected; attributes are semantically typed (string vs boolean); `<meta charset="utf-8">` is injected into an existing `<head>` and conflicting declarations are rejected; both writers are atomic (temporary file plus replace). Stylesheet output remains a deliberately restricted CSS subset. This is not production-ready. Static example emits HTML and CSS, no client JS. The declarative macros are safe only within a single function body (ADR-0004). See `docs/compatibility-matrix.md` for per-feature status and open questions.
 
 ## Next unit of work
 
-1. **M0.4-B atomic output:** write to a temporary file and rename, so an I/O failure cannot replace a valid artifact. Add write-failure and cleanup tests.
-2. **M0.4-D verification:** Linux sanitizer runner and strict Clang build; Clang is not installed and ASan/UBSan runtimes are absent on the current Windows/MinGW host.
-3. **M0.4-C component architecture:** review ADR-0004, compare lifetime-safe builder designs, prototype nested components. Not to be implemented without a decision.
+1. **M0.4-C component architecture:** review ADR-0004, compare lifetime-safe builder designs, prototype nested components. This is a design gate: do not implement a public builder API without a decision.
+2. **M0.4-D verification:** Linux sanitizer runner and strict Clang build; Clang is not installed and ASan/UBSan runtimes are absent on the current Windows/MinGW host. This also unblocks the POSIX atomic-write branch, which has never been executed.
+3. **Allocation-failure injection** for the materialization and write paths.
 4. Design an extensible CSS grammar and at-rule model; don't keep extending ad-hoc character rejection.
 5. Port a licensed reference page; measure semantic, accessibility, visual, and payload parity across browsers.
 

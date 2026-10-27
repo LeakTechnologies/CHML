@@ -3,6 +3,52 @@
 Behaviour-affecting changes, newest first. Test counts are for `ctest` on the
 suite as configured in `CMakeLists.txt`.
 
+## Unreleased — M0.4-B atomic output (2026-10-27)
+
+### Added
+
+- **`src/chml_io.c`, `src/chml_io.h`:** a shared writer that serializes into a
+  temporary file beside the destination and only replaces the destination after
+  a complete, flushed, closed write. Temporary names are opened with the C11
+  exclusive mode `"wbx"`, so a stale temporary is never silently truncated.
+- **`tests/atomic_write_test.c`:** 8 checks covering the success path, clean
+  truncation on overwrite, missing directory, directory destination, read-only
+  destination, temporary cleanup on failure, the stylesheet writer, and
+  replacement-versus-rewrite identity.
+
+### Changed
+
+- `chml_document_write` and `chml_stylesheet_write` both go through the atomic
+  writer. A failed write removes its temporary file and leaves any existing
+  artifact untouched.
+
+### Platform note
+
+POSIX uses ISO C `rename()`. Windows uses `MoveFileExA` with
+`MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH`, because ISO C `rename()`
+does not replace an existing destination there. This is an OS call behind
+`#ifdef _WIN32`, not a compiler extension; the translation unit remains valid
+ISO C11.
+
+### Evidence
+
+- Strict GCC C11 build clean; `ctest` 4/4.
+- 8 atomic-write checks pass on the Windows/MinGW host.
+- Negative controls: reverting to a direct in-place write fails only the identity
+  check; skipping temporary cleanup fails the two cleanup checks.
+
+### Limitations
+
+- The atomicity check relies on file identity (`nFileIndex` on Windows,
+  `st_dev`/`st_ino` on POSIX). The POSIX branch has not been executed.
+- No fault injection mid-write. The design covers a partial write by never
+  touching the destination until the temporary is complete, but a failure
+  injected inside the serializer is not yet exercised.
+- No locking: concurrent writers to the same path are last-writer-wins.
+- `MOVEFILE_WRITE_THROUGH` does not guarantee the directory entry survives a
+  power loss on every filesystem; the guarantee here is against partial content,
+  not against hardware failure.
+
 ## Unreleased — M0.4-A serialization correctness (2026-10-27)
 
 ### Added

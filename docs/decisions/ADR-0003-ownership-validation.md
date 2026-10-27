@@ -13,7 +13,7 @@ Reject invalid element names and void elements with children or text during mate
 - Allocation-failure injection and fuzzing are not implemented.
 - HTML raw-text elements (`script`, `style`), comments, namespaces, doctype control, boolean attributes, and document-level structural constraints need explicit policies.
 - Input size, recursion depth, integer overflow, embedded NUL, and Unicode validation need broader coverage.
-- Output is not atomic; an I/O failure can leave a truncated file.
+- ~~Output is not atomic; an I/O failure can leave a truncated file.~~ Addressed in M0.4-B.
 - A CSS declaration whitelist/blacklist is not a CSS parser. Current CSS restrictions reject valid syntax and must be replaced.
 
 ## Evidence required for acceptance
@@ -30,5 +30,6 @@ UTF-8 declaration policy. `<plaintext>` is rejected as unserializable.
 
 Still open, unchanged by that work: allocation-failure injection and fuzzing,
 comment nodes, namespaces/foreign content, doctype control, document-level
-structural constraints, input size, embedded NUL and Unicode validation, atomic
-output, and the CSS restriction listed above. The ADR stays proposed.
+structural constraints, input size, embedded NUL and Unicode validation, and the
+CSS restriction listed above. Output atomicity was resolved in M0.4-B. The ADR
+stays proposed.
