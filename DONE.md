@@ -42,13 +42,17 @@ Branch housekeeping:
 
 | Check | Result |
 | --- | --- |
-| `master` is the default branch | yes |
-| `main` holds no unique work | one file, `README.md`, content `# CHML` |
-| Open PRs depending on `main` | none |
-| Branch protection on `main` | impossible on a private free repo (API returns 403) |
+| `master` is the default branch | yes (API) |
+| `main` holds no unique work | yes: one file, `README.md`, content `# CHML` |
+| Open PRs depending on `main` | none (API returned an empty list) |
+| Branch protection on `main` | **not determinable.** The API returned 403 "Upgrade to GitHub Pro or make this repository public". That means the query failed, not that protection was verified absent. |
 | Initial commit merged into `master` | yes, `9ae8d1c` is an ancestor |
 
-`main` deleted via the API. No force-push and no history rewriting.
+`main` was deleted on the basis of the three verified conditions plus the fact
+that it held no unique content. The branch-protection check was unavailable and
+is recorded as such; no protection state was modified, and none could have been
+left dangling because the branch no longer exists. No force-push and no history
+rewriting.
 
 ## 2026-10-27 — M0.4-D cross-platform verification (partial: Windows only)
 

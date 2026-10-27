@@ -21,7 +21,12 @@ are replacement-mechanism checks, one of which is **expected to fail by design**
   `harness_error` (exit 2) or `none` (exit 0). Both verification scripts now
   require exit 1 **and** the `identity_unchanged` marker, so a crash or an
   unrelated failure can no longer pass as a successful discrimination.
-- Remote `main` deleted after the four preconditions were verified.
+- Remote `main` deleted. Verified before deletion: `master` is the default
+  branch, `main` held only a one-line README, no open PRs depended on it, and
+  the initial commit is an ancestor of `master`. The branch-protection query
+  returned 403 (unavailable on a private free repository), so absence of
+  protection was **not** verified — recorded as an unavailable check rather than
+  a confirmed absence.
 
 ### Blocked
 
