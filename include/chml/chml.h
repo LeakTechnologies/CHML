@@ -4,7 +4,7 @@
 
 typedef struct ChmlDocument ChmlDocument;
 typedef struct ChmlNode ChmlNode;
-typedef enum { CHML_OK=0, CHML_ERR_ARGUMENT, CHML_ERR_MEMORY, CHML_ERR_IO } ChmlStatus;
+typedef enum { CHML_OK=0, CHML_ERR_ARGUMENT, CHML_ERR_MEMORY, CHML_ERR_IO, CHML_ERR_POLICY } ChmlStatus;
 
 /* How an attribute value is interpreted at serialization time.
    CHML_ATTR_STRING  -> name="value" (ARIA, data-*, and every other attribute)

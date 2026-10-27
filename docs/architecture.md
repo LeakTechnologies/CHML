@@ -54,3 +54,58 @@ A suite where that negative control passes is proving nothing.
 
 ## Future work
 HTML semantics and serializer hardening; CSS tokenization and at-rules; portable C23 builds; browser visual/a11y tests; server rendering; optional Wasm/browser interop.
+
+## Structural depth and lifetime contracts
+
+- **Depth convention:** the root of a document is depth 0. The maximum
+  permitted depth is **128**, so the deepest supported tree is 129 levels.
+- **Declarative construction** enforces the bound inside `clone`; a deeper
+  definition is rejected with `CHML_ERR_ARGUMENT` and nothing is added.
+- **Serialization** enforces the same bound independently in preflight, and
+  again defensively during emission. A refusal returns `CHML_ERR_ARGUMENT`
+  before the atomic writer is opened, so no destination is created and an
+  existing one is left byte-identical.
+- **Builder construction does not enforce the bound.** An over-deep tree can be
+  built and will be refused at write time. This is a deliberate M0 limitation,
+  not an oversight.
+- This bound is a **structural recursion safeguard**, not a denial-of-service
+  guarantee: a shallow tree with very many siblings can still consume
+  significant memory and time.
+
+**Declarative input lifetime.** `chml_document_add` deep-copies the supplied
+`ChmlNodeDef` tree synchronously; the caller's structures only need to be alive
+for the duration of that call. A `ChmlNodeDef` whose `children` pointer refers
+to storage that has already expired is invalid input, and constructing one — for
+example by retaining a pointer to a loop-local compound literal — is a caller
+error that CHML cannot detect.
+
+**No concurrent mutation.** Callers must not mutate or destroy a document, a
+builder, or any referenced attribute value during the interval from preflight
+through the completion of serialization. The writer does not snapshot the tree
+and CHML is not thread-safe.
+
+**Error classification.** `CHML_ERR_ARGUMENT` covers structural problems
+(depth, invalid names, void elements with content). `CHML_ERR_POLICY` is
+reserved for URL-policy refusal and never indicates a structural fault.
+
+## URL policy decisions
+
+- **Names are matched ASCII case-insensitively**, including `xlink:href`. CHML
+  emits HTML; the HTML tokenizer lowercases attribute names and then maps
+  `xlink:href` into the XLink namespace. Matching foreign attribute names
+  case-sensitively would let `XLINK:HREF` bypass the policy while still acting
+  as a link in the browser.
+- **SVG `script` is a governed element.** An SVG script element loads and runs
+  the resource named by `href`/`xlink:href`; a `data:` value there executes.
+  Governing HTML `script[src]` while ignoring the SVG form would leave the
+  refusal of `data:` trivially bypassable.
+- **Refusal happens in preflight**, before the atomic writer opens a temporary
+  file. A policy refusal therefore creates no destination and leaves an
+  existing one byte-identical. The check is repeated defensively during
+  emission.
+- **This is not sanitization.** The policy bounds the scheme of an enumerated
+  set of URL-bearing attributes. Attribute content is escaped, never filtered;
+  inline script text is emitted as authored; event handlers, CSS `url()`,
+  `meta refresh`, `base[href]` and the stylesheet writer are outside it.
+  CHML output must not be described as safe for untrusted input on the strength
+  of this policy alone.
