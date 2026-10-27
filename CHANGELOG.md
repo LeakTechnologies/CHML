@@ -94,7 +94,7 @@ and `CMakeLists.txt` are untouched; the test suite is unchanged at 4/4.
 
 ### Evidence
 
-- Experimental code, outside the repository: `E:\Development\chml-m04c-experiments`
+- Experimental code, kept outside the repository and not committed:
   (`README.md` holds the exact build/run commands and recorded results).
 - All four candidates emit byte-identical HTML (240 bytes).
 - Transactional D rolled back cleanly at all 5 injected allocation failures;

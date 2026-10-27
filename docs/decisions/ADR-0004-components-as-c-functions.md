@@ -196,10 +196,8 @@ convenience form. The builder is the cross-function form.
 
 ## Evidence location
 
-Experimental code is kept **outside** this repository:
-
-`E:\Development\chml-m04c-experiments` — see its `README.md` for exact build and
-run commands and the recorded results.
+Experimental code is kept **outside** this repository, alongside its own
+`README.md` recording the exact build and run commands and the measured results.
 
 Nothing in this ADR has been implemented in `include/`, `src/`, or `tests/`.
 

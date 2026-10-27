@@ -118,7 +118,7 @@ Done:
 - ADR-0004 rewritten with results, the handle-stability definition, a
   recommended architecture and eight unresolved questions.
 
-Verification commands (from `E:\Development\chml-m04c-experiments`):
+Verification commands (run from the external experiments directory):
 
 ```
 gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion -Wstrict-prototypes common.c cand_a.c cand_b.c cand_c.c cand_d.c harness.c -o harness.exe

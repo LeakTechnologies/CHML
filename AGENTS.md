@@ -27,7 +27,7 @@ M0.3 baseline with M0.4-A, M0.4-B and M0.4-C evaluated/complete; **M0.4-D is par
 ## Next unit of work
 
 1. **Unblock Linux verification (M0.4-D2).** The workflow exists and triggers, but GitHub will not start the job: the repository is private and the account's Actions payment or spending limit is failing. Options, all requiring your decision: fix billing, make the repository public, or run `scripts/linux/dev-verify.sh` on any Linux host. Do not report M0.4 as closed until it produces real output.
-2. **Decide ADR-0004.** Evaluation complete: D recommended, negative controls recorded. Experimental code is at `E:\Development\chml-m04c-experiments`, outside this repository. Do not implement the builder API until the ADR is reviewed.
+2. **Decide ADR-0004.** Evaluation complete: D recommended, negative controls recorded. The experimental code is kept outside this repository and is not committed. Do not implement the builder API until the ADR is reviewed.
 3. Design an extensible CSS grammar and at-rule model; don't keep extending ad-hoc character rejection.
 4. Port a licensed reference page; measure semantic, accessibility, visual, and payload parity across browsers.
 
